@@ -1,22 +1,15 @@
+mod error;
+
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
-use thiserror::Error;
+
+use crate::error::Error;
 
 struct AppState {
     client: ClientWithMiddleware,
-}
-
-#[derive(Error, Debug)]
-enum Error {
-    #[error(transparent)]
-    Reqwest(#[from] reqwest::Error),
-    #[error(transparent)]
-    ReqwestMiddleware(#[from] reqwest_middleware::Error),
-    #[error(transparent)]
-    Yaml(#[from] yaml_serde::Error),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -35,15 +28,6 @@ struct VersionRelease {
     release_date: String,
     release_notes: String,
     release_version: Option<String>,
-}
-
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.to_string().as_ref())
-    }
 }
 
 #[tauri::command]
