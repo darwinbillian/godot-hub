@@ -1,43 +1,20 @@
 mod error;
+mod godot_website;
 
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
 
-use crate::error::Error;
+use crate::{error::Error, godot_website::Version};
 
 struct AppState {
     client: ClientWithMiddleware,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct Version {
-    name: String,
-    flavor: String,
-    release_date: String,
-    release_notes: String,
-    featured: Option<String>,
-    releases: Option<Vec<VersionRelease>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct VersionRelease {
-    name: String,
-    release_date: String,
-    release_notes: String,
-    release_version: Option<String>,
-}
-
 #[tauri::command]
 async fn list_versions(state: State<'_, AppState>) -> Result<Vec<Version>, Error> {
-    let request = state.client.get(
-        "https://raw.githubusercontent.com/godotengine/godot-website/master/_data/versions.yml",
-    );
-    let response = request.send().await?.error_for_status()?;
-    let bytes = response.bytes().await?;
-    let versions = yaml_serde::from_slice::<Vec<Version>>(&bytes)?;
+    let versions = crate::godot_website::get_versions(&state.client).await?;
     Ok(versions)
 }
 
