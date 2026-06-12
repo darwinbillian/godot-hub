@@ -60,7 +60,15 @@ function VersionItem({ version }: { version: Version }) {
           <span>Release notes</span>
           <ExternalLinkIcon size={16} />
         </a>
-        <button className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600">
+        <button
+          className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600"
+          onClick={() => {
+            invoke("install", {
+              version: version.name,
+              flavor: version.flavor,
+            }).catch((e) => console.error(e));
+          }}
+        >
           Install
         </button>
       </div>
