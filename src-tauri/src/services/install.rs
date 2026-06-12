@@ -15,6 +15,13 @@ pub struct InstallService {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Install {
+    pub id: String,
+    pub dir: String,
+    pub metadata: InstallMetadata,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct InstallMetadata {
     pub version: String,
     pub flavor: String,
@@ -38,6 +45,42 @@ impl InstallService {
         metadata.save(&dir).await?;
 
         Ok(())
+    }
+
+    pub async fn list(&self) -> Result<Vec<Install>, Error> {
+        let mut installs = Vec::<Install>::new();
+
+        let mut entries = match tokio::fs::read_dir(&self.installs_dir).await {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(installs),
+            entries => entries?,
+        };
+
+        while let Some(entry) = entries.next_entry().await? {
+            let file_type = entry.file_type().await?;
+            if !file_type.is_dir() {
+                continue;
+            }
+
+            let id = match entry.file_name().into_string() {
+                Ok(id) => id,
+                Err(_) => continue,
+            };
+
+            let dir = entry.path();
+            let metadata = match InstallMetadata::load(&dir).await {
+                Ok(metadata) => metadata,
+                Err(_) => continue,
+            };
+
+            let install = Install {
+                id,
+                dir: dir.to_string_lossy().into_owned(),
+                metadata,
+            };
+            installs.push(install);
+        }
+
+        Ok(installs)
     }
 
     async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
@@ -72,5 +115,12 @@ impl InstallMetadata {
         let path = dir.join("metadata.hub.json");
         tokio::fs::write(path, bytes).await?;
         Ok(())
+    }
+
+    pub async fn load(dir: &Path) -> Result<InstallMetadata, Error> {
+        let path = dir.join("metadata.hub.json");
+        let bytes = tokio::fs::read(path).await?;
+        let metadata = serde_json::from_slice::<InstallMetadata>(&bytes)?;
+        Ok(metadata)
     }
 }

@@ -8,7 +8,11 @@ use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use tauri::{Manager, State};
 
-use crate::{error::Error, godot_website::Version, services::install::InstallService};
+use crate::{
+    error::Error,
+    godot_website::Version,
+    services::install::{Install, InstallService},
+};
 
 struct AppState {
     client: ClientWithMiddleware,
@@ -25,6 +29,12 @@ async fn list_versions(state: State<'_, AppState>) -> Result<Vec<Version>, Error
 async fn install(state: State<'_, AppState>, version: String, flavor: String) -> Result<(), Error> {
     state.install_service.install(&version, &flavor).await?;
     Ok(())
+}
+
+#[tauri::command]
+async fn list_installs(state: State<'_, AppState>) -> Result<Vec<Install>, Error> {
+    let installs = state.install_service.list().await?;
+    Ok(installs)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -56,7 +66,11 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![list_versions, install])
+        .invoke_handler(tauri::generate_handler![
+            list_versions,
+            install,
+            list_installs
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
