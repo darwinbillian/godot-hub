@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use http_cache_reqwest::CacheMode;
 use reqwest_middleware::ClientWithMiddleware;
+use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncWriteExt};
 use tokio_stream::StreamExt;
 
@@ -13,6 +14,13 @@ pub struct InstallService {
     pub installs_dir: PathBuf,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InstallMetadata {
+    pub version: String,
+    pub flavor: String,
+    pub executable: String,
+}
+
 impl InstallService {
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
         let download_path = self.download(version, flavor).await?;
@@ -20,6 +28,14 @@ impl InstallService {
         let id = format!("{}-{}", version, flavor);
         let dir = self.installs_dir.join(id);
         crate::utils::zip::extract(download_path, &dir).await?;
+
+        let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
+        let metadata = InstallMetadata {
+            version: version.to_owned(),
+            flavor: flavor.to_owned(),
+            executable,
+        };
+        metadata.save(&dir).await?;
 
         Ok(())
     }
@@ -47,5 +63,14 @@ impl InstallService {
         file.flush().await?;
 
         Ok(path)
+    }
+}
+
+impl InstallMetadata {
+    pub async fn save(&self, dir: &Path) -> Result<(), Error> {
+        let bytes = serde_json::to_vec(self)?;
+        let path = dir.join("metadata.hub.json");
+        tokio::fs::write(path, bytes).await?;
+        Ok(())
     }
 }
