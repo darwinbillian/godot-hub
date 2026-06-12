@@ -1,6 +1,7 @@
 mod error;
 mod godot_website;
 mod services;
+mod utils;
 
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
@@ -43,6 +44,7 @@ pub fn run() {
             let install_service = InstallService {
                 client: client.clone(),
                 downloads_dir: local_data_dir.join("downloads"),
+                installs_dir: local_data_dir.join("installs"),
             };
 
             let state = AppState {

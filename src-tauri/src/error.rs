@@ -10,7 +10,11 @@ pub enum Error {
     #[error(transparent)]
     ReqwestMiddleware(#[from] reqwest_middleware::Error),
     #[error(transparent)]
+    Task(#[from] tokio::task::JoinError),
+    #[error(transparent)]
     Yaml(#[from] yaml_serde::Error),
+    #[error(transparent)]
+    Zip(#[from] zip::result::ZipError),
 }
 
 impl Serialize for Error {

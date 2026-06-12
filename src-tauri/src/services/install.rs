@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use http_cache_reqwest::CacheMode;
 use reqwest_middleware::ClientWithMiddleware;
@@ -10,11 +10,17 @@ use crate::error::Error;
 pub struct InstallService {
     pub client: ClientWithMiddleware,
     pub downloads_dir: PathBuf,
+    pub installs_dir: PathBuf,
 }
 
 impl InstallService {
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
-        self.download(version, flavor).await?;
+        let download_path = self.download(version, flavor).await?;
+
+        let id = format!("{}-{}", version, flavor);
+        let dir = self.installs_dir.join(id);
+        crate::utils::zip::extract(download_path, &dir).await?;
+
         Ok(())
     }
 
