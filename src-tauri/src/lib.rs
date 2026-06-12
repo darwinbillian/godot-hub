@@ -37,6 +37,12 @@ async fn list_installs(state: State<'_, AppState>) -> Result<Vec<Install>, Error
     Ok(installs)
 }
 
+#[tauri::command]
+async fn launch(state: State<'_, AppState>, id: String) -> Result<(), Error> {
+    state.install_service.launch(&id).await?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -69,7 +75,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_versions,
             install,
-            list_installs
+            list_installs,
+            launch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

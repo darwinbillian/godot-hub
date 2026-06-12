@@ -58,7 +58,12 @@ function InstallItem({ install }: { install: Install }) {
         </div>
       </div>
       <div>
-        <button className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600">
+        <button
+          className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600"
+          onClick={() => {
+            invoke("launch", { id: install.id }).catch((e) => console.error(e));
+          }}
+        >
           Launch
         </button>
       </div>

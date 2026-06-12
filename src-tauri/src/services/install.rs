@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use http_cache_reqwest::CacheMode;
 use reqwest_middleware::ClientWithMiddleware;
 use serde::{Deserialize, Serialize};
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::{fs::File, io::AsyncWriteExt, process::Command};
 use tokio_stream::StreamExt;
 
 use crate::error::Error;
@@ -81,6 +81,14 @@ impl InstallService {
         }
 
         Ok(installs)
+    }
+
+    pub async fn launch(&self, id: &str) -> Result<(), Error> {
+        let dir = self.installs_dir.join(id);
+        let metadata = InstallMetadata::load(&dir).await?;
+        let executable = dir.join(&metadata.executable);
+        Command::new(executable).spawn()?;
+        Ok(())
     }
 
     async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
