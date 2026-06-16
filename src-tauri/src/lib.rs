@@ -11,7 +11,10 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::{
     error::Error,
     godot_website::Version,
-    services::install::{Install, InstallService},
+    services::{
+        download::DownloadService,
+        install::{Install, InstallService},
+    },
 };
 
 struct AppState {
@@ -63,10 +66,14 @@ pub fn run() {
                 }))
                 .build();
 
-            let install_service = InstallService {
+            let download_service = DownloadService {
                 client: client.clone(),
-                downloads_dir: local_data_dir.join("downloads"),
-                installs_dir: local_data_dir.join("installs"),
+                dir: local_data_dir.join("downloads"),
+            };
+
+            let install_service = InstallService {
+                download_service,
+                dir: local_data_dir.join("installs"),
             };
 
             let state = AppState {
