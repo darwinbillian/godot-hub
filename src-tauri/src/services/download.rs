@@ -21,7 +21,8 @@ impl DownloadService {
         tokio::fs::create_dir_all(&self.dir).await?;
 
         let path = self.dir.join(name);
-        let mut file = File::create(&path).await?;
+        let temporary_path = path.with_added_extension("part");
+        let mut file = File::create(&temporary_path).await?;
 
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
@@ -29,6 +30,8 @@ impl DownloadService {
         }
 
         file.flush().await?;
+
+        tokio::fs::rename(&temporary_path, &path).await?;
 
         Ok(path)
     }
