@@ -14,6 +14,8 @@ pub enum Error {
     #[error(transparent)]
     Task(#[from] tokio::task::JoinError),
     #[error(transparent)]
+    Tauri(#[from] tauri::Error),
+    #[error(transparent)]
     Yaml(#[from] yaml_serde::Error),
     #[error(transparent)]
     Zip(#[from] zip::result::ZipError),

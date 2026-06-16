@@ -6,7 +6,7 @@ mod utils;
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use tauri::{Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{
     error::Error,
@@ -26,8 +26,14 @@ async fn list_versions(state: State<'_, AppState>) -> Result<Vec<Version>, Error
 }
 
 #[tauri::command]
-async fn install(state: State<'_, AppState>, version: String, flavor: String) -> Result<(), Error> {
+async fn install(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    version: String,
+    flavor: String,
+) -> Result<(), Error> {
     state.install_service.install(&version, &flavor).await?;
+    app.emit("update_installs", ())?;
     Ok(())
 }
 

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
@@ -17,10 +18,24 @@ interface InstallMetadata {
 export default function InstallListPage() {
   const [installs, setInstalls] = useState<Install[]>();
 
-  useEffect(() => {
+  function updateInstalls() {
     invoke<Install[]>("list_installs")
       .then((installs) => setInstalls(installs))
       .catch((e) => console.error(e));
+  }
+
+  useEffect(() => {
+    updateInstalls();
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen("update_installs", () => {
+      updateInstalls();
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
 
   return (
