@@ -10,11 +10,10 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{
     error::Error,
-    godot_website::Version,
     services::{
         download::DownloadService,
         install::{Install, InstallService},
-        version::VersionService,
+        version::{Version, VersionService},
     },
 };
 

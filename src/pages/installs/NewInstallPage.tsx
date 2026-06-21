@@ -6,17 +6,7 @@ import { Link, useNavigate } from "react-router";
 interface Version {
   name: string;
   flavor: string;
-  release_date: string;
   release_notes: string;
-  featured?: string;
-  releases?: VersionRelease[];
-}
-
-interface VersionRelease {
-  name: string;
-  release_date: string;
-  release_notes: string;
-  release_version?: string;
 }
 
 export default function NewInstallPage() {
@@ -40,11 +30,9 @@ export default function NewInstallPage() {
         <h1 className="text-2xl font-semibold">Install Godot Editor</h1>
       </div>
       <div className="flex flex-col gap-4">
-        {versions
-          ?.filter((version) => version.flavor === "stable")
-          .map((version) => (
-            <VersionItem key={version.name} version={version} />
-          ))}
+        {versions?.map((version) => (
+          <VersionItem key={version.name} version={version} />
+        ))}
       </div>
     </div>
   );
@@ -62,7 +50,7 @@ function VersionItem({ version }: { version: Version }) {
       <div className="flex items-center gap-2">
         <a
           className="flex items-center gap-1 text-sm text-neutral-400 transition cursor-pointer hover:text-neutral-200"
-          href={"https://godotengine.org" + version.release_notes}
+          href={version.release_notes}
           target="_blank"
         >
           <span>Release notes</span>
