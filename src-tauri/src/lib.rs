@@ -5,7 +5,7 @@ mod utils;
 
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_middleware::ClientBuilder;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{
@@ -14,17 +14,18 @@ use crate::{
     services::{
         download::DownloadService,
         install::{Install, InstallService},
+        version::VersionService,
     },
 };
 
 struct AppState {
-    client: ClientWithMiddleware,
     install_service: InstallService,
+    version_service: VersionService,
 }
 
 #[tauri::command]
 async fn list_versions(state: State<'_, AppState>) -> Result<Vec<Version>, Error> {
-    let versions = crate::godot_website::get_versions(&state.client).await?;
+    let versions = state.version_service.list().await?;
     Ok(versions)
 }
 
@@ -76,9 +77,13 @@ pub fn run() {
                 dir: local_data_dir.join("installs"),
             };
 
+            let version_service = VersionService {
+                client: client.clone(),
+            };
+
             let state = AppState {
-                client,
                 install_service,
+                version_service,
             };
             app.manage(state);
 
