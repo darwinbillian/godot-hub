@@ -97,21 +97,29 @@ function InstallItem({ install }: { install: Install }) {
             <ChevronDownIcon size={16} />
           </button>
           {expand && (
-            <div className="absolute z-10 top-full right-0 w-max flex flex-col p-2 border border-white/10 bg-neutral-800 rounded">
-              <button
-                className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
+            <>
+              <div
+                className="fixed inset-0 z-10"
                 onClick={() => {
-                  invoke("uninstall", { id: install.id }).catch((e) =>
-                    console.error(e),
-                  );
-
                   setExpand(false);
                 }}
-              >
-                <Trash2Icon size={16} />
-                Uninstall
-              </button>
-            </div>
+              />
+              <div className="absolute z-10 top-full right-0 w-max flex flex-col p-2 border border-white/10 bg-neutral-800 rounded">
+                <button
+                  className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
+                  onClick={() => {
+                    invoke("uninstall", { id: install.id }).catch((e) =>
+                      console.error(e),
+                    );
+
+                    setExpand(false);
+                  }}
+                >
+                  <Trash2Icon size={16} />
+                  Uninstall
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
