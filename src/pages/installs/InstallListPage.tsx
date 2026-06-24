@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { ChevronDownIcon, PlayIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
@@ -63,6 +64,8 @@ export default function InstallListPage() {
 }
 
 function InstallItem({ install }: { install: Install }) {
+  const [expand, setExpand] = useState(false);
+
   return (
     <div className="flex gap-2 p-4 border border-white/10 bg-neutral-800 rounded">
       <div className="flex flex-1 gap-2">
@@ -73,14 +76,44 @@ function InstallItem({ install }: { install: Install }) {
         </div>
       </div>
       <div>
-        <button
-          className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600"
-          onClick={() => {
-            invoke("launch", { id: install.id }).catch((e) => console.error(e));
-          }}
-        >
-          Launch
-        </button>
+        <div className="relative flex items-stretch">
+          <button
+            className="flex items-center gap-1 px-2 py-1 font-semibold bg-blue-500 rounded-l transition cursor-pointer hover:bg-blue-600"
+            onClick={() => {
+              invoke("launch", { id: install.id }).catch((e) =>
+                console.error(e),
+              );
+            }}
+          >
+            <PlayIcon size={16} />
+            Launch
+          </button>
+          <button
+            className="p-1 bg-blue-500 rounded-r transition cursor-pointer hover:bg-blue-600"
+            onClick={() => {
+              setExpand((expand) => !expand);
+            }}
+          >
+            <ChevronDownIcon size={16} />
+          </button>
+          {expand && (
+            <div className="absolute z-10 top-full right-0 w-max flex flex-col p-2 border border-white/10 bg-neutral-800 rounded">
+              <button
+                className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
+                onClick={() => {
+                  invoke("uninstall", { id: install.id }).catch((e) =>
+                    console.error(e),
+                  );
+
+                  setExpand(false);
+                }}
+              >
+                <Trash2Icon size={16} />
+                Uninstall
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

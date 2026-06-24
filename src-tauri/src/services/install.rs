@@ -87,6 +87,12 @@ impl InstallService {
         Ok(())
     }
 
+    pub async fn uninstall(&self, id: &str) -> Result<(), Error> {
+        let dir = self.dir.join(id);
+        tokio::fs::remove_dir_all(dir).await?;
+        Ok(())
+    }
+
     async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
         let url = format!("https://downloads.godotengine.org/?version={}&flavor={}&slug=win64.exe.zip&platform=windows.64", version, flavor);
         let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);

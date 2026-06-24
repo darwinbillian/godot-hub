@@ -52,6 +52,13 @@ async fn launch(state: State<'_, AppState>, id: String) -> Result<(), Error> {
     Ok(())
 }
 
+#[tauri::command]
+async fn uninstall(app: AppHandle, state: State<'_, AppState>, id: String) -> Result<(), Error> {
+    state.install_service.uninstall(&id).await?;
+    app.emit("update_installs", ())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -93,7 +100,8 @@ pub fn run() {
             list_versions,
             install,
             list_installs,
-            launch
+            launch,
+            uninstall
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
