@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router";
-
-interface Version {
-  name: string;
-  flavor: string;
-  release_notes: string;
-}
+import { install, listVersions, Version } from "../../lib/commands";
 
 export default function NewInstallPage() {
   const [versions, setVersions] = useState<Version[]>();
 
   useEffect(() => {
-    invoke<Version[]>("list_versions")
+    listVersions()
       .then((versions) => setVersions(versions))
       .catch((e) => console.error(e));
   }, []);
@@ -59,10 +53,9 @@ function VersionCard({ version }: { version: Version }) {
         <button
           className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600"
           onClick={() => {
-            invoke("install", {
-              version: version.name,
-              flavor: version.flavor,
-            }).catch((e) => console.error(e));
+            install(version.name, version.flavor).catch((e) =>
+              console.error(e),
+            );
 
             navigate("/installs");
           }}

@@ -1,21 +1,14 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ChevronDownIcon, PlayIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-
-interface Install {
-  id: string;
-  dir: string;
-  version: string;
-  flavor: string;
-}
+import { Install, launch, listInstalls, uninstall } from "../../lib/commands";
 
 export default function InstallListPage() {
   const [installs, setInstalls] = useState<Install[]>();
 
   function updateInstalls() {
-    invoke<Install[]>("list_installs")
+    listInstalls()
       .then((installs) => setInstalls(installs))
       .catch((e) => console.error(e));
   }
@@ -83,7 +76,7 @@ function InstallButton({ install }: { install: Install }) {
       <button
         className="flex items-center gap-1 px-2 py-1 font-semibold bg-blue-500 rounded-l transition cursor-pointer hover:bg-blue-600"
         onClick={() => {
-          invoke("launch", { id: install.id }).catch((e) => console.error(e));
+          launch(install.id).catch((e) => console.error(e));
         }}
       >
         <PlayIcon size={16} />
@@ -109,9 +102,7 @@ function InstallButton({ install }: { install: Install }) {
             <button
               className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
               onClick={() => {
-                invoke("uninstall", { id: install.id }).catch((e) =>
-                  console.error(e),
-                );
+                uninstall(install.id).catch((e) => console.error(e));
 
                 setExpand(false);
               }}
