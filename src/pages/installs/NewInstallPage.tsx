@@ -31,14 +31,14 @@ export default function NewInstallPage() {
       </div>
       <div className="flex flex-col gap-4">
         {versions?.map((version) => (
-          <VersionItem key={version.name} version={version} />
+          <VersionCard key={version.name} version={version} />
         ))}
       </div>
     </div>
   );
 }
 
-function VersionItem({ version }: { version: Version }) {
+function VersionCard({ version }: { version: Version }) {
   const navigate = useNavigate();
 
   return (

@@ -51,16 +51,14 @@ export default function InstallListPage() {
       </div>
       <div className="flex flex-col gap-4">
         {installs?.map((install) => (
-          <InstallItem install={install} key={install.id} />
+          <InstallCard key={install.id} install={install} />
         ))}
       </div>
     </div>
   );
 }
 
-function InstallItem({ install }: { install: Install }) {
-  const [expand, setExpand] = useState(false);
-
+function InstallCard({ install }: { install: Install }) {
   return (
     <div className="flex gap-2 p-4 border border-white/10 bg-neutral-800 rounded">
       <div className="flex flex-1 gap-2">
@@ -71,53 +69,59 @@ function InstallItem({ install }: { install: Install }) {
         </div>
       </div>
       <div>
-        <div className="relative flex items-stretch">
-          <button
-            className="flex items-center gap-1 px-2 py-1 font-semibold bg-blue-500 rounded-l transition cursor-pointer hover:bg-blue-600"
-            onClick={() => {
-              invoke("launch", { id: install.id }).catch((e) =>
-                console.error(e),
-              );
-            }}
-          >
-            <PlayIcon size={16} />
-            Launch
-          </button>
-          <button
-            className="p-1 bg-blue-500 rounded-r transition cursor-pointer hover:bg-blue-600"
-            onClick={() => {
-              setExpand((expand) => !expand);
-            }}
-          >
-            <ChevronDownIcon size={16} />
-          </button>
-          {expand && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => {
-                  setExpand(false);
-                }}
-              />
-              <div className="absolute z-10 top-full right-0 w-max flex flex-col p-2 border border-white/10 bg-neutral-800 rounded">
-                <button
-                  className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
-                  onClick={() => {
-                    invoke("uninstall", { id: install.id }).catch((e) =>
-                      console.error(e),
-                    );
-
-                    setExpand(false);
-                  }}
-                >
-                  <Trash2Icon size={16} />
-                  Uninstall
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <InstallButton install={install} />
       </div>
+    </div>
+  );
+}
+
+function InstallButton({ install }: { install: Install }) {
+  const [expand, setExpand] = useState(false);
+
+  return (
+    <div className="relative flex items-stretch">
+      <button
+        className="flex items-center gap-1 px-2 py-1 font-semibold bg-blue-500 rounded-l transition cursor-pointer hover:bg-blue-600"
+        onClick={() => {
+          invoke("launch", { id: install.id }).catch((e) => console.error(e));
+        }}
+      >
+        <PlayIcon size={16} />
+        Launch
+      </button>
+      <button
+        className="p-1 bg-blue-500 rounded-r transition cursor-pointer hover:bg-blue-600"
+        onClick={() => {
+          setExpand((expand) => !expand);
+        }}
+      >
+        <ChevronDownIcon size={16} />
+      </button>
+      {expand && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => {
+              setExpand(false);
+            }}
+          />
+          <div className="absolute z-10 top-full right-0 w-max flex flex-col p-2 border border-white/10 bg-neutral-800 rounded">
+            <button
+              className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
+              onClick={() => {
+                invoke("uninstall", { id: install.id }).catch((e) =>
+                  console.error(e),
+                );
+
+                setExpand(false);
+              }}
+            >
+              <Trash2Icon size={16} />
+              Uninstall
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
