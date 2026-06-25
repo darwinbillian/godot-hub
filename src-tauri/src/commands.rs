@@ -69,7 +69,8 @@ pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallDto>
 
 #[tauri::command]
 pub async fn launch(state: State<'_, AppState>, id: String) -> Result<(), Error> {
-    state.install_service.launch(&id).await?;
+    let install = state.install_service.get(&id).await?;
+    install.launch().await?;
     Ok(())
 }
 
@@ -79,7 +80,8 @@ pub async fn uninstall(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<(), Error> {
-    state.install_service.uninstall(&id).await?;
+    let install = state.install_service.get(&id).await?;
+    install.uninstall().await?;
     app.emit("update_installs", ())?;
     Ok(())
 }

@@ -74,18 +74,15 @@ impl InstallService {
         Ok(installs)
     }
 
-    pub async fn launch(&self, id: &str) -> Result<(), Error> {
+    pub async fn get(&self, id: &str) -> Result<Install, Error> {
         let dir = self.dir.join(id);
         let metadata = InstallMetadata::load(&dir).await?;
-        let executable = dir.join(&metadata.executable);
-        Command::new(executable).spawn()?;
-        Ok(())
-    }
-
-    pub async fn uninstall(&self, id: &str) -> Result<(), Error> {
-        let dir = self.dir.join(id);
-        tokio::fs::remove_dir_all(dir).await?;
-        Ok(())
+        let install = Install {
+            id: id.to_owned(),
+            dir,
+            metadata,
+        };
+        Ok(install)
     }
 
     async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
@@ -93,6 +90,19 @@ impl InstallService {
         let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
         let path = self.download_service.download(&url, &name).await?;
         Ok(path)
+    }
+}
+
+impl Install {
+    pub async fn launch(&self) -> Result<(), Error> {
+        let executable = self.dir.join(&self.metadata.executable);
+        Command::new(executable).spawn()?;
+        Ok(())
+    }
+
+    pub async fn uninstall(&self) -> Result<(), Error> {
+        tokio::fs::remove_dir_all(&self.dir).await?;
+        Ok(())
     }
 }
 
