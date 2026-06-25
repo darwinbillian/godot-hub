@@ -1,3 +1,4 @@
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::{
@@ -6,10 +7,46 @@ use crate::{
     state::AppState,
 };
 
+#[derive(Serialize, Debug)]
+pub struct VersionDto {
+    name: String,
+    flavor: String,
+    release_notes: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct InstallDto {
+    id: String,
+    dir: String,
+    version: String,
+    flavor: String,
+}
+
+impl From<Version> for VersionDto {
+    fn from(value: Version) -> Self {
+        Self {
+            name: value.name,
+            flavor: value.flavor,
+            release_notes: value.release_notes,
+        }
+    }
+}
+
+impl From<Install> for InstallDto {
+    fn from(value: Install) -> Self {
+        Self {
+            id: value.id,
+            dir: value.dir.to_string_lossy().into_owned(),
+            version: value.metadata.version,
+            flavor: value.metadata.flavor,
+        }
+    }
+}
+
 #[tauri::command]
-pub async fn list_versions(state: State<'_, AppState>) -> Result<Vec<Version>, Error> {
+pub async fn list_versions(state: State<'_, AppState>) -> Result<Vec<VersionDto>, Error> {
     let versions = state.version_service.list().await?;
-    Ok(versions)
+    Ok(versions.into_iter().map(VersionDto::from).collect())
 }
 
 #[tauri::command]
@@ -25,9 +62,9 @@ pub async fn install(
 }
 
 #[tauri::command]
-pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<Install>, Error> {
+pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallDto>, Error> {
     let installs = state.install_service.list().await?;
-    Ok(installs)
+    Ok(installs.into_iter().map(InstallDto::from).collect())
 }
 
 #[tauri::command]

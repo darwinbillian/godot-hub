@@ -7,13 +7,8 @@ import { Link } from "react-router";
 interface Install {
   id: string;
   dir: string;
-  metadata: InstallMetadata;
-}
-
-interface InstallMetadata {
   version: string;
   flavor: string;
-  executable: string;
 }
 
 export default function InstallListPage() {
@@ -71,7 +66,7 @@ function InstallItem({ install }: { install: Install }) {
       <div className="flex flex-1 gap-2">
         <img className="size-8" src="/icon.svg" />
         <div>
-          <div className="font-semibold">Godot {install.metadata.version}</div>
+          <div className="font-semibold">Godot {install.version}</div>
           <div className="text-sm text-neutral-400">{install.dir}</div>
         </div>
       </div>

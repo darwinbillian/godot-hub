@@ -10,10 +10,9 @@ pub struct InstallService {
     pub dir: PathBuf,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
 pub struct Install {
     pub id: String,
-    pub dir: String,
+    pub dir: PathBuf,
     pub metadata: InstallMetadata,
 }
 
@@ -68,11 +67,7 @@ impl InstallService {
                 Err(_) => continue,
             };
 
-            let install = Install {
-                id,
-                dir: dir.to_string_lossy().into_owned(),
-                metadata,
-            };
+            let install = Install { id, dir, metadata };
             installs.push(install);
         }
 

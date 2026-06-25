@@ -1,5 +1,4 @@
 use reqwest_middleware::ClientWithMiddleware;
-use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 
@@ -7,7 +6,6 @@ pub struct VersionService {
     pub client: ClientWithMiddleware,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
 pub struct Version {
     pub name: String,
     pub flavor: String,
@@ -16,8 +14,8 @@ pub struct Version {
 
 impl VersionService {
     pub async fn list(&self) -> Result<Vec<Version>, Error> {
-        let versions = crate::godot_website::get_versions(&self.client)
-            .await?
+        let versions = crate::godot_website::get_versions(&self.client).await?;
+        Ok(versions
             .into_iter()
             .filter(|version| version.flavor == "stable")
             .map(|version| Version {
@@ -28,7 +26,6 @@ impl VersionService {
                     version.release_notes.trim_start_matches("/")
                 ),
             })
-            .collect::<Vec<Version>>();
-        Ok(versions)
+            .collect())
     }
 }
