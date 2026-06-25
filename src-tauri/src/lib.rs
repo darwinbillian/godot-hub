@@ -1,6 +1,7 @@
 mod error;
 mod godot_website;
 mod services;
+mod state;
 mod utils;
 
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
@@ -15,12 +16,8 @@ use crate::{
         install::{Install, InstallService},
         version::{Version, VersionService},
     },
+    state::AppState,
 };
-
-struct AppState {
-    install_service: InstallService,
-    version_service: VersionService,
-}
 
 #[tauri::command]
 async fn list_versions(state: State<'_, AppState>) -> Result<Vec<Version>, Error> {
