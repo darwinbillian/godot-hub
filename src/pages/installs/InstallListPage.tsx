@@ -56,7 +56,7 @@ export default function InstallListPage() {
       </div>
       <div className="flex flex-col gap-4">
         {installs?.map((install) => (
-          <InstallItem install={install} key={install.dir} />
+          <InstallItem install={install} key={install.id} />
         ))}
       </div>
     </div>
