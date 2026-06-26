@@ -35,7 +35,7 @@ pub fn run() {
             let install_service =
                 InstallService::new(download_service, local_data_dir.join("installs"));
 
-            let version_service = VersionService::new(client.clone());
+            let version_service = VersionService::new(client.clone(), install_service.clone());
 
             let state = AppState {
                 install_service,

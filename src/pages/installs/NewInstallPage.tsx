@@ -51,7 +51,8 @@ function VersionCard({ version }: { version: Version }) {
           <ExternalLinkIcon size={16} />
         </a>
         <button
-          className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600"
+          className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600 disabled:bg-neutral-900 disabled:cursor-default"
+          disabled={version.installed}
           onClick={() => {
             install(version.name, version.flavor).catch((e) =>
               console.error(e),
@@ -60,7 +61,7 @@ function VersionCard({ version }: { version: Version }) {
             navigate("/installs");
           }}
         >
-          Install
+          {version.installed ? "Installed" : "Install"}
         </button>
       </div>
     </div>

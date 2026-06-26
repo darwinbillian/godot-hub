@@ -1,11 +1,19 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
 use crate::{error::Error, services::download::DownloadService};
 
+#[derive(Clone)]
 pub struct InstallService {
+    inner: Arc<InstallServiceInner>,
+}
+
+pub struct InstallServiceInner {
     download_service: DownloadService,
     dir: PathBuf,
 }
@@ -26,8 +34,10 @@ pub struct InstallMetadata {
 impl InstallService {
     pub fn new(download_service: DownloadService, dir: PathBuf) -> Self {
         Self {
-            download_service,
-            dir,
+            inner: Arc::new(InstallServiceInner {
+                download_service,
+                dir,
+            }),
         }
     }
 
@@ -35,7 +45,7 @@ impl InstallService {
         let download_path = self.download(version, flavor).await?;
 
         let id = format!("{}-{}", version, flavor);
-        let dir = self.dir.join(id);
+        let dir = self.inner.dir.join(id);
         crate::utils::zip::extract(download_path, &dir).await?;
 
         let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
@@ -52,7 +62,7 @@ impl InstallService {
     pub async fn list(&self) -> Result<Vec<Install>, Error> {
         let mut installs = Vec::<Install>::new();
 
-        let mut entries = match tokio::fs::read_dir(&self.dir).await {
+        let mut entries = match tokio::fs::read_dir(&self.inner.dir).await {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(installs),
             entries => entries?,
         };
@@ -82,7 +92,7 @@ impl InstallService {
     }
 
     pub async fn get(&self, id: &str) -> Result<Install, Error> {
-        let dir = self.dir.join(id);
+        let dir = self.inner.dir.join(id);
         let metadata = InstallMetadata::load(&dir).await?;
         let install = Install {
             id: id.to_owned(),
@@ -95,7 +105,7 @@ impl InstallService {
     async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
         let url = format!("https://downloads.godotengine.org/?version={}&flavor={}&slug=win64.exe.zip&platform=windows.64", version, flavor);
         let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
-        let path = self.download_service.download(&url, &name).await?;
+        let path = self.inner.download_service.download(&url, &name).await?;
         Ok(path)
     }
 }

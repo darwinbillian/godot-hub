@@ -4,6 +4,7 @@ export interface Version {
   name: string;
   flavor: string;
   release_notes: string;
+  installed: boolean;
 }
 
 export interface Install {

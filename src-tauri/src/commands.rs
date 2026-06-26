@@ -12,6 +12,7 @@ pub struct VersionDto {
     name: String,
     flavor: String,
     release_notes: String,
+    installed: bool,
 }
 
 #[derive(Serialize, Debug)]
@@ -28,6 +29,7 @@ impl From<Version> for VersionDto {
             name: value.name,
             flavor: value.flavor,
             release_notes: value.release_notes,
+            installed: value.installed,
         }
     }
 }
