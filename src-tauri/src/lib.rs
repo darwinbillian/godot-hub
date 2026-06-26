@@ -29,19 +29,13 @@ pub fn run() {
                 }))
                 .build();
 
-            let download_service = DownloadService {
-                client: client.clone(),
-                dir: local_data_dir.join("downloads"),
-            };
+            let download_service =
+                DownloadService::new(client.clone(), local_data_dir.join("downloads"));
 
-            let install_service = InstallService {
-                download_service,
-                dir: local_data_dir.join("installs"),
-            };
+            let install_service =
+                InstallService::new(download_service, local_data_dir.join("installs"));
 
-            let version_service = VersionService {
-                client: client.clone(),
-            };
+            let version_service = VersionService::new(client.clone());
 
             let state = AppState {
                 install_service,

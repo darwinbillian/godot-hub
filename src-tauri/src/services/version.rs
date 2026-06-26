@@ -3,7 +3,7 @@ use reqwest_middleware::ClientWithMiddleware;
 use crate::error::Error;
 
 pub struct VersionService {
-    pub client: ClientWithMiddleware,
+    client: ClientWithMiddleware,
 }
 
 pub struct Version {
@@ -13,6 +13,10 @@ pub struct Version {
 }
 
 impl VersionService {
+    pub fn new(client: ClientWithMiddleware) -> Self {
+        Self { client }
+    }
+
     pub async fn list(&self) -> Result<Vec<Version>, Error> {
         let versions = crate::godot_website::get_versions(&self.client).await?;
         Ok(versions

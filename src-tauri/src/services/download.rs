@@ -8,11 +8,15 @@ use tokio_stream::StreamExt;
 use crate::error::Error;
 
 pub struct DownloadService {
-    pub client: ClientWithMiddleware,
-    pub dir: PathBuf,
+    client: ClientWithMiddleware,
+    dir: PathBuf,
 }
 
 impl DownloadService {
+    pub fn new(client: ClientWithMiddleware, dir: PathBuf) -> Self {
+        Self { client, dir }
+    }
+
     pub async fn download(&self, url: &str, name: &str) -> Result<PathBuf, Error> {
         let request = self.client.get(url).with_extension(CacheMode::NoStore);
         let response = request.send().await?.error_for_status()?;

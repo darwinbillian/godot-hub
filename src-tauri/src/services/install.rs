@@ -6,8 +6,8 @@ use tokio::process::Command;
 use crate::{error::Error, services::download::DownloadService};
 
 pub struct InstallService {
-    pub download_service: DownloadService,
-    pub dir: PathBuf,
+    download_service: DownloadService,
+    dir: PathBuf,
 }
 
 pub struct Install {
@@ -24,6 +24,13 @@ pub struct InstallMetadata {
 }
 
 impl InstallService {
+    pub fn new(download_service: DownloadService, dir: PathBuf) -> Self {
+        Self {
+            download_service,
+            dir,
+        }
+    }
+
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
         let download_path = self.download(version, flavor).await?;
 
