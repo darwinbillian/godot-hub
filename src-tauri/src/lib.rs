@@ -19,7 +19,11 @@ use crate::{
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            let window = app.get_webview_window("main").expect("no main window");
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }))
         .setup(|app| {
             let local_data_dir = app.path().local_data_dir()?.join("Godot Hub");
 
