@@ -14,6 +14,10 @@ export interface Install {
   flavor: string;
 }
 
+export function show(): Promise<void> {
+  return invoke<void>("show");
+}
+
 export function listVersions(): Promise<Version[]> {
   return invoke<Version[]>("list_versions");
 }

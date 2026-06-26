@@ -1,5 +1,5 @@
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, Window};
 
 use crate::{
     error::Error,
@@ -43,6 +43,11 @@ impl From<Install> for InstallDto {
             flavor: value.metadata.flavor,
         }
     }
+}
+
+#[tauri::command]
+pub async fn show(window: Window) {
+    window.show().unwrap()
 }
 
 #[tauri::command]
