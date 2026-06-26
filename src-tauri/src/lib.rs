@@ -18,6 +18,8 @@ use crate::{
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .setup(|app| {
             let local_data_dir = app.path().local_data_dir()?.join("Godot Hub");
 
@@ -45,7 +47,6 @@ pub fn run() {
 
             Ok(())
         })
-        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::list_versions,
             commands::install,
