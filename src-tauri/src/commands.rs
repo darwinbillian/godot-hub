@@ -85,3 +85,10 @@ pub async fn uninstall(
     app.emit("update_installs", ())?;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn reveal(state: State<'_, AppState>, id: String) -> Result<(), Error> {
+    let install = state.install_service.get(&id).await?;
+    install.reveal().await?;
+    Ok(())
+}

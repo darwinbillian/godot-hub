@@ -16,6 +16,8 @@ pub enum Error {
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
     #[error(transparent)]
+    Opener(#[from] tauri_plugin_opener::Error),
+    #[error(transparent)]
     Yaml(#[from] yaml_serde::Error),
     #[error(transparent)]
     Zip(#[from] zip::result::ZipError),

@@ -1,8 +1,19 @@
 import { listen } from "@tauri-apps/api/event";
-import { ChevronDownIcon, PlayIcon, Trash2Icon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  FolderOpenIcon,
+  PlayIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { Install, launch, listInstalls, uninstall } from "../../lib/commands";
+import {
+  Install,
+  launch,
+  listInstalls,
+  reveal,
+  uninstall,
+} from "../../lib/commands";
 
 export default function InstallListPage() {
   const [installs, setInstalls] = useState<Install[]>();
@@ -99,6 +110,17 @@ function InstallButton({ install }: { install: Install }) {
             }}
           />
           <div className="absolute z-10 top-full right-0 w-max flex flex-col p-2 border border-white/10 bg-neutral-800 rounded">
+            <button
+              className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
+              onClick={() => {
+                reveal(install.id).catch((e) => console.error(e));
+
+                setExpand(false);
+              }}
+            >
+              <FolderOpenIcon size={16} />
+              Show in Explorer
+            </button>
             <button
               className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
               onClick={() => {

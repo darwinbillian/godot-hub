@@ -104,6 +104,12 @@ impl Install {
         tokio::fs::remove_dir_all(&self.dir).await?;
         Ok(())
     }
+
+    pub async fn reveal(&self) -> Result<(), Error> {
+        let executable = self.dir.join(&self.metadata.executable);
+        tauri_plugin_opener::reveal_item_in_dir(executable)?;
+        Ok(())
+    }
 }
 
 impl InstallMetadata {

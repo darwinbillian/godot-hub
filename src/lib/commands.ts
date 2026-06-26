@@ -39,3 +39,9 @@ export function uninstall(id: string): Promise<void> {
     id,
   });
 }
+
+export function reveal(id: string): Promise<void> {
+  return invoke<void>("reveal", {
+    id,
+  });
+}
