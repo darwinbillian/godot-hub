@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+@layer components {
+  .btn {
+    @apply inline-flex cursor-pointer items-center gap-1 rounded bg-neutral-800 px-2 py-1 font-semibold text-neutral-200 transition hover:bg-neutral-700;
+  }
+
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-neutral-400 hover:bg-white/10 hover:text-neutral-200;
+  }
+
+  .btn-link {
+    @apply bg-transparent text-neutral-400 hover:bg-transparent hover:text-neutral-200;
+  }
+
+  .btn:disabled {
+    @apply cursor-default bg-neutral-800 hover:bg-neutral-800;
+  }
+
+  .card {
+    @apply rounded border border-white/10 bg-neutral-800;
+  }
+
+  .list {
+    @apply flex flex-col;
+  }
+
+  .menu {
+    @apply flex flex-col rounded border border-neutral-700 bg-neutral-800 p-2;
+
+    li {
+      @apply flex flex-col;
+
+      > * {
+        @apply flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition hover:bg-white/10;
+      }
+    }
+  }
+}
