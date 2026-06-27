@@ -111,7 +111,7 @@ function InstallButton({ install }: { install: Install }) {
           />
           <div className="absolute top-full right-0 z-10 flex w-max flex-col rounded border border-white/10 bg-neutral-800 p-2">
             <button
-              className="flex cursor-pointer items-center gap-2 rounded bg-neutral-800 px-2 py-1 transition hover:bg-neutral-700"
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition hover:bg-white/10"
               onClick={() => {
                 reveal(install.id).catch((e) => console.error(e));
 
@@ -122,7 +122,7 @@ function InstallButton({ install }: { install: Install }) {
               Show in Explorer
             </button>
             <button
-              className="flex cursor-pointer items-center gap-2 rounded bg-neutral-800 px-2 py-1 transition hover:bg-neutral-700"
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition hover:bg-white/10"
               onClick={() => {
                 uninstall(install.id).catch((e) => console.error(e));
 
