@@ -46,7 +46,7 @@ export default function InstallListPage() {
         </div>
         <div>
           <Link
-            className="px-2 py-1 font-semibold bg-blue-500 rounded transition cursor-pointer hover:bg-blue-600"
+            className="cursor-pointer rounded bg-blue-500 px-2 py-1 font-semibold transition hover:bg-blue-600"
             to="/installs/new"
           >
             Install Editor
@@ -64,7 +64,7 @@ export default function InstallListPage() {
 
 function InstallCard({ install }: { install: Install }) {
   return (
-    <div className="flex gap-2 p-4 border border-white/10 bg-neutral-800 rounded">
+    <div className="flex gap-2 rounded border border-white/10 bg-neutral-800 p-4">
       <div className="flex flex-1 gap-2">
         <img className="size-8" src="/icon.svg" />
         <div>
@@ -85,7 +85,7 @@ function InstallButton({ install }: { install: Install }) {
   return (
     <div className="relative flex items-stretch">
       <button
-        className="flex items-center gap-1 px-2 py-1 font-semibold bg-blue-500 rounded-l transition cursor-pointer hover:bg-blue-600"
+        className="flex cursor-pointer items-center gap-1 rounded-l bg-blue-500 px-2 py-1 font-semibold transition hover:bg-blue-600"
         onClick={() => {
           launch(install.id).catch((e) => console.error(e));
         }}
@@ -94,7 +94,7 @@ function InstallButton({ install }: { install: Install }) {
         Launch
       </button>
       <button
-        className="p-1 bg-blue-500 rounded-r transition cursor-pointer hover:bg-blue-600"
+        className="cursor-pointer rounded-r bg-blue-500 p-1 transition hover:bg-blue-600"
         onClick={() => {
           setExpand((expand) => !expand);
         }}
@@ -109,9 +109,9 @@ function InstallButton({ install }: { install: Install }) {
               setExpand(false);
             }}
           />
-          <div className="absolute z-10 top-full right-0 w-max flex flex-col p-2 border border-white/10 bg-neutral-800 rounded">
+          <div className="absolute top-full right-0 z-10 flex w-max flex-col rounded border border-white/10 bg-neutral-800 p-2">
             <button
-              className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
+              className="flex cursor-pointer items-center gap-2 rounded bg-neutral-800 px-2 py-1 transition hover:bg-neutral-700"
               onClick={() => {
                 reveal(install.id).catch((e) => console.error(e));
 
@@ -122,7 +122,7 @@ function InstallButton({ install }: { install: Install }) {
               Show in Explorer
             </button>
             <button
-              className="flex items-center gap-2 px-2 py-1 bg-neutral-800 rounded transition cursor-pointer hover:bg-neutral-700"
+              className="flex cursor-pointer items-center gap-2 rounded bg-neutral-800 px-2 py-1 transition hover:bg-neutral-700"
               onClick={() => {
                 uninstall(install.id).catch((e) => console.error(e));
 
