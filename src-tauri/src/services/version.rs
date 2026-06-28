@@ -13,7 +13,12 @@ pub struct Version {
     pub name: String,
     pub flavor: String,
     pub release_notes: String,
-    pub installed: bool,
+    pub status: VersionStatus,
+}
+
+pub enum VersionStatus {
+    Available,
+    Installed,
 }
 
 impl VersionService {
@@ -31,7 +36,13 @@ impl VersionService {
             .into_iter()
             .filter(|version| version.flavor == "stable")
             .map(|version| {
-                let installed = installs.contains(&(version.name.clone(), version.flavor.clone()));
+                let key = (version.name.clone(), version.flavor.clone());
+                let status = if installs.contains(&key) {
+                    VersionStatus::Installed
+                } else {
+                    VersionStatus::Available
+                };
+
                 Version {
                     name: version.name,
                     flavor: version.flavor,
@@ -39,7 +50,7 @@ impl VersionService {
                         "https://godotengine.org/{}",
                         version.release_notes.trim_start_matches("/")
                     ),
-                    installed,
+                    status,
                 }
             })
             .collect())

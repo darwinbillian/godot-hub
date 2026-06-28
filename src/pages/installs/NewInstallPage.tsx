@@ -53,7 +53,7 @@ function VersionCard({ version }: { version: Version }) {
         </a>
         <button
           className="btn btn-primary"
-          disabled={version.installed}
+          disabled={version.status.type == "installed"}
           onClick={() => {
             install(version.name, version.flavor).catch((e) =>
               console.error(e),
@@ -62,7 +62,7 @@ function VersionCard({ version }: { version: Version }) {
             navigate("/installs");
           }}
         >
-          {version.installed ? "Installed" : "Install"}
+          {version.status.type == "installed" ? "Installed" : "Install"}
         </button>
       </div>
     </div>
