@@ -11,7 +11,10 @@ use reqwest_middleware::ClientBuilder;
 use tauri::Manager;
 
 use crate::{
-    services::{download::DownloadService, install::InstallService, version::VersionService},
+    services::{
+        download::DownloadService, install::InstallService, task::TaskService,
+        version::VersionService,
+    },
     state::AppState,
 };
 
@@ -38,8 +41,13 @@ pub fn run() {
             let download_service =
                 DownloadService::new(client.clone(), local_data_dir.join("downloads"));
 
-            let install_service =
-                InstallService::new(download_service, local_data_dir.join("installs"));
+            let task_service = TaskService::new();
+
+            let install_service = InstallService::new(
+                download_service,
+                task_service,
+                local_data_dir.join("installs"),
+            );
 
             let version_service = VersionService::new(client.clone(), install_service.clone());
 

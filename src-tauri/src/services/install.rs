@@ -6,7 +6,13 @@ use std::{
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-use crate::{error::Error, services::download::DownloadService};
+use crate::{
+    error::Error,
+    services::{
+        download::DownloadService,
+        task::{Task, TaskService},
+    },
+};
 
 #[derive(Clone)]
 pub struct InstallService {
@@ -15,6 +21,7 @@ pub struct InstallService {
 
 pub struct InstallServiceInner {
     download_service: DownloadService,
+    task_service: TaskService,
     dir: PathBuf,
 }
 
@@ -32,29 +39,39 @@ pub struct InstallMetadata {
 }
 
 impl InstallService {
-    pub fn new(download_service: DownloadService, dir: PathBuf) -> Self {
+    pub fn new(download_service: DownloadService, task_service: TaskService, dir: PathBuf) -> Self {
         Self {
             inner: Arc::new(InstallServiceInner {
                 download_service,
+                task_service,
                 dir,
             }),
         }
     }
 
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
-        let download_path = self.download(version, flavor).await?;
-
         let id = format!("{}-{}", version, flavor);
-        let dir = self.inner.dir.join(id);
-        crate::utils::zip::extract(download_path, &dir).await?;
+        let task = Task::new(&id, version, flavor);
 
-        let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
-        let metadata = InstallMetadata {
-            version: version.to_owned(),
-            flavor: flavor.to_owned(),
-            executable,
-        };
-        metadata.save(&dir).await?;
+        self.inner
+            .task_service
+            .spawn(task, async || -> Result<(), Error> {
+                let download_path = self.download(version, flavor).await?;
+
+                let dir = self.inner.dir.join(id);
+                crate::utils::zip::extract(download_path, &dir).await?;
+
+                let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
+                let metadata = InstallMetadata {
+                    version: version.to_owned(),
+                    flavor: flavor.to_owned(),
+                    executable,
+                };
+                metadata.save(&dir).await?;
+
+                Ok(())
+            })
+            .await?;
 
         Ok(())
     }
