@@ -3,7 +3,10 @@ use tauri::{AppHandle, Emitter, State, Window};
 
 use crate::{
     error::Error,
-    services::{install::Install, version::Version},
+    services::{
+        install::Install,
+        version::{Version, VersionStatus},
+    },
     state::AppState,
 };
 
@@ -12,7 +15,14 @@ pub struct VersionDto {
     name: String,
     flavor: String,
     release_notes: String,
-    installed: bool,
+    status: VersionStatusDto,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum VersionStatusDto {
+    Available,
+    Installed,
 }
 
 #[derive(Serialize, Debug)]
@@ -29,7 +39,16 @@ impl From<Version> for VersionDto {
             name: value.name,
             flavor: value.flavor,
             release_notes: value.release_notes,
-            installed: value.installed,
+            status: value.status.into(),
+        }
+    }
+}
+
+impl From<VersionStatus> for VersionStatusDto {
+    fn from(value: VersionStatus) -> Self {
+        match value {
+            VersionStatus::Available => VersionStatusDto::Available,
+            VersionStatus::Installed => VersionStatusDto::Installed,
         }
     }
 }

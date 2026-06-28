@@ -4,8 +4,10 @@ export interface Version {
   name: string;
   flavor: string;
   release_notes: string;
-  installed: boolean;
+  status: VersionStatus;
 }
+
+export type VersionStatus = { type: "available" } | { type: "installed" };
 
 export interface Install {
   id: string;
