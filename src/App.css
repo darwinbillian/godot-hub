@@ -2,11 +2,11 @@
 
 @layer components {
   .btn {
-    @apply inline-flex cursor-pointer items-center gap-1 rounded bg-neutral-800 px-2 py-1 font-semibold text-neutral-200 transition hover:bg-neutral-700;
+    @apply inline-flex cursor-pointer items-center gap-1 rounded bg-neutral-800 px-2 py-1 font-semibold text-neutral-200 transition hover:bg-neutral-700 disabled:pointer-events-none;
   }
 
-  .btn-primary {
-    @apply bg-blue-500 hover:bg-blue-600;
+  .btn-outline {
+    @apply border border-neutral-700 bg-transparent hover:border-neutral-500 hover:bg-transparent;
   }
 
   .btn-ghost {
@@ -14,10 +14,14 @@
   }
 
   .btn-link {
-    @apply bg-transparent text-neutral-400 hover:bg-transparent hover:text-neutral-200;
+    @apply bg-transparent p-0 text-neutral-400 hover:bg-transparent hover:text-neutral-200;
   }
 
-  .btn:disabled {
+  .btn-primary {
+    @apply bg-blue-500 hover:bg-blue-600;
+  }
+
+  .btn-disabled {
     @apply cursor-default bg-neutral-800 hover:bg-neutral-800;
   }
 

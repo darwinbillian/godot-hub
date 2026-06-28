@@ -1,5 +1,9 @@
 import { install, listVersions, Version } from "@/lib/commands";
-import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ExternalLinkIcon,
+  OctagonAlertIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
@@ -51,9 +55,25 @@ function VersionCard({ version }: { version: Version }) {
           <span>Release notes</span>
           <ExternalLinkIcon size={16} />
         </a>
+        {version.status.type === "failed" && (
+          <div title={version.status.error}>
+            <OctagonAlertIcon className="text-red-400" />
+          </div>
+        )}
         <button
-          className="btn btn-primary"
-          disabled={version.status.type == "installed"}
+          className={
+            version.status.type === "installing"
+              ? "btn btn-outline"
+              : version.status.type === "installed"
+                ? "btn btn-disabled"
+                : version.status.type === "failed"
+                  ? "btn bg-neutral-700 hover:bg-neutral-600"
+                  : "btn btn-primary"
+          }
+          disabled={
+            version.status.type === "installing" ||
+            version.status.type === "installed"
+          }
           onClick={() => {
             install(version.name, version.flavor).catch((e) =>
               console.error(e),
@@ -62,7 +82,13 @@ function VersionCard({ version }: { version: Version }) {
             navigate("/installs");
           }}
         >
-          {version.status.type == "installed" ? "Installed" : "Install"}
+          {version.status.type === "installing"
+            ? "In Progress"
+            : version.status.type === "installed"
+              ? "Installed"
+              : version.status.type === "failed"
+                ? "Retry"
+                : "Install"}
         </button>
       </div>
     </div>

@@ -7,7 +7,11 @@ export interface Version {
   status: VersionStatus;
 }
 
-export type VersionStatus = { type: "available" } | { type: "installed" };
+export type VersionStatus =
+  | { type: "available" }
+  | { type: "installing" }
+  | { type: "installed" }
+  | { type: "failed"; error: Error };
 
 export interface Install {
   id: string;
@@ -15,6 +19,8 @@ export interface Install {
   version: string;
   flavor: string;
 }
+
+export type Error = string;
 
 export function show(): Promise<void> {
   return invoke<void>("show");
