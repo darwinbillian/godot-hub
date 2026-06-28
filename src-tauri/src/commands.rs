@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State, Window};
 
@@ -22,7 +24,9 @@ pub struct VersionDto {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum VersionStatusDto {
     Available,
+    Installing,
     Installed,
+    Failed { error: Arc<Error> },
 }
 
 #[derive(Serialize, Debug)]
@@ -48,7 +52,9 @@ impl From<VersionStatus> for VersionStatusDto {
     fn from(value: VersionStatus) -> Self {
         match value {
             VersionStatus::Available => VersionStatusDto::Available,
+            VersionStatus::Installing => VersionStatusDto::Installing,
             VersionStatus::Installed => VersionStatusDto::Installed,
+            VersionStatus::Failed(e) => VersionStatusDto::Failed { error: e },
         }
     }
 }
