@@ -1,5 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export interface Error {
+  message: string;
+}
+
 export interface Version {
   name: string;
   flavor: string;
@@ -19,8 +23,6 @@ export interface Install {
   version: string;
   flavor: string;
 }
-
-export type Error = string;
 
 export function show(): Promise<void> {
   return invoke<void>("show");

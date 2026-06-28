@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::borrow::Borrow;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State, Window};
@@ -11,6 +11,11 @@ use crate::{
     },
     state::AppState,
 };
+
+#[derive(Serialize, Debug)]
+pub struct ErrorDto {
+    message: String,
+}
 
 #[derive(Serialize, Debug)]
 pub struct VersionDto {
@@ -26,7 +31,7 @@ pub enum VersionStatusDto {
     Available,
     Installing,
     Installed,
-    Failed { error: Arc<Error> },
+    Failed { error: ErrorDto },
 }
 
 #[derive(Serialize, Debug)]
@@ -35,6 +40,17 @@ pub struct InstallDto {
     dir: String,
     version: String,
     flavor: String,
+}
+
+impl<E> From<E> for ErrorDto
+where
+    E: Borrow<Error>,
+{
+    fn from(value: E) -> Self {
+        Self {
+            message: value.borrow().to_string(),
+        }
+    }
 }
 
 impl From<Version> for VersionDto {
@@ -54,7 +70,7 @@ impl From<VersionStatus> for VersionStatusDto {
             VersionStatus::Available => VersionStatusDto::Available,
             VersionStatus::Installing => VersionStatusDto::Installing,
             VersionStatus::Installed => VersionStatusDto::Installed,
-            VersionStatus::Failed(e) => VersionStatusDto::Failed { error: e },
+            VersionStatus::Failed(e) => VersionStatusDto::Failed { error: e.into() },
         }
     }
 }
@@ -76,7 +92,7 @@ pub async fn show(window: Window) {
 }
 
 #[tauri::command]
-pub async fn list_versions(state: State<'_, AppState>) -> Result<Vec<VersionDto>, Error> {
+pub async fn list_versions(state: State<'_, AppState>) -> Result<Vec<VersionDto>, ErrorDto> {
     let versions = state.version_service.list().await?;
     Ok(versions.into_iter().map(VersionDto::from).collect())
 }
@@ -87,20 +103,20 @@ pub async fn install(
     state: State<'_, AppState>,
     version: String,
     flavor: String,
-) -> Result<(), Error> {
+) -> Result<(), ErrorDto> {
     state.install_service.install(&version, &flavor).await?;
-    app.emit("update_installs", ())?;
+    app.emit("update_installs", ()).map_err(Error::from)?;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallDto>, Error> {
+pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallDto>, ErrorDto> {
     let installs = state.install_service.list().await?;
     Ok(installs.into_iter().map(InstallDto::from).collect())
 }
 
 #[tauri::command]
-pub async fn launch(state: State<'_, AppState>, id: String) -> Result<(), Error> {
+pub async fn launch(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
     let install = state.install_service.get(&id).await?;
     install.launch().await?;
     Ok(())
@@ -111,15 +127,15 @@ pub async fn uninstall(
     app: AppHandle,
     state: State<'_, AppState>,
     id: String,
-) -> Result<(), Error> {
+) -> Result<(), ErrorDto> {
     let install = state.install_service.get(&id).await?;
     install.uninstall().await?;
-    app.emit("update_installs", ())?;
+    app.emit("update_installs", ()).map_err(Error::from)?;
     Ok(())
 }
 
 #[tauri::command]
-pub async fn reveal(state: State<'_, AppState>, id: String) -> Result<(), Error> {
+pub async fn reveal(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
     let install = state.install_service.get(&id).await?;
     install.reveal().await?;
     Ok(())

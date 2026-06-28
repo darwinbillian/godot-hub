@@ -1,4 +1,3 @@
-use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -21,13 +20,4 @@ pub enum Error {
     Yaml(#[from] yaml_serde::Error),
     #[error(transparent)]
     Zip(#[from] zip::result::ZipError),
-}
-
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.to_string().as_ref())
-    }
 }

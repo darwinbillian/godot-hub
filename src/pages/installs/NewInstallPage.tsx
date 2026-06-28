@@ -56,7 +56,7 @@ function VersionCard({ version }: { version: Version }) {
           <ExternalLinkIcon size={16} />
         </a>
         {version.status.type === "failed" && (
-          <div title={version.status.error}>
+          <div title={version.status.error.message}>
             <OctagonAlertIcon className="text-red-400" />
           </div>
         )}
