@@ -1,7 +1,7 @@
+import { install, listVersions, Version } from "@/lib/commands";
 import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { install, listVersions, Version } from "../../lib/commands";
 
 export default function NewInstallPage() {
   const [versions, setVersions] = useState<Version[]>();

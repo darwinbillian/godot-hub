@@ -1,3 +1,10 @@
+import {
+  Install,
+  launch,
+  listInstalls,
+  reveal,
+  uninstall,
+} from "@/lib/commands";
 import { listen } from "@tauri-apps/api/event";
 import {
   ChevronDownIcon,
@@ -7,13 +14,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import {
-  Install,
-  launch,
-  listInstalls,
-  reveal,
-  uninstall,
-} from "../../lib/commands";
 
 export default function InstallListPage() {
   const [installs, setInstalls] = useState<Install[]>();
