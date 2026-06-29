@@ -8,9 +8,10 @@ mod utils;
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::ClientBuilder;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 use crate::{
+    commands::VersionUpdateEventArgsDto,
     services::{
         download::DownloadService, install::InstallService, task::TaskService,
         version::VersionService,
@@ -54,6 +55,13 @@ pub fn run() {
                 install_service.clone(),
                 task_service.clone(),
             );
+
+            {
+                let handle = app.handle().clone();
+                version_service.update_event().subscribe(move |args| {
+                    let _ = handle.emit("update_version", &VersionUpdateEventArgsDto::from(args));
+                });
+            }
 
             let state = AppState {
                 install_service,

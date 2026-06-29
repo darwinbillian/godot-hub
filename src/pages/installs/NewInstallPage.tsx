@@ -1,4 +1,10 @@
-import { install, listVersions, Version } from "@/lib/commands";
+import {
+  install,
+  listVersions,
+  Version,
+  VersionUpdateEventArgs,
+} from "@/lib/commands";
+import { listen } from "@tauri-apps/api/event";
 import {
   ArrowLeftIcon,
   ExternalLinkIcon,
@@ -14,6 +20,28 @@ export default function NewInstallPage() {
     listVersions()
       .then((versions) => setVersions(versions))
       .catch((e) => console.error(e));
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<VersionUpdateEventArgs>(
+      "update_version",
+      (event) => {
+        setVersions(
+          (versions) =>
+            versions &&
+            versions.map((version) =>
+              event.payload.name === version.name &&
+              event.payload.flavor === version.flavor
+                ? { ...version, status: event.payload.status }
+                : version,
+            ),
+        );
+      },
+    );
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
 
   return (

@@ -17,6 +17,7 @@ pub struct VersionService {
     client: ClientWithMiddleware,
     install_service: InstallService,
     task_service: TaskService,
+    update_event: VersionUpdateEvent,
 }
 
 pub struct Version {
@@ -33,17 +34,33 @@ pub enum VersionStatus {
     Failed(Arc<Error>),
 }
 
+pub struct VersionUpdateEvent {
+    task_service: TaskService,
+}
+
+pub struct VersionUpdateEventArgs {
+    pub version: String,
+    pub flavor: String,
+    pub status: VersionStatus,
+}
+
 impl VersionService {
     pub fn new(
         client: ClientWithMiddleware,
         install_service: InstallService,
         task_service: TaskService,
     ) -> Self {
+        let update_event = VersionUpdateEvent::new(task_service.clone());
         Self {
             client,
             install_service,
             task_service,
+            update_event,
         }
+    }
+
+    pub fn update_event(&self) -> &VersionUpdateEvent {
+        &self.update_event
     }
 
     pub async fn list(&self) -> Result<Vec<Version>, Error> {
@@ -94,5 +111,30 @@ impl VersionService {
             .into_iter()
             .map(|task| ((task.version.clone(), task.flavor.clone()), task))
             .collect()
+    }
+}
+
+impl VersionUpdateEvent {
+    pub fn new(task_service: TaskService) -> Self {
+        Self { task_service }
+    }
+
+    pub fn subscribe<F>(&self, f: F)
+    where
+        F: Fn(VersionUpdateEventArgs) + Send + Sync + 'static,
+    {
+        self.task_service.update_event().subscribe(move |task| {
+            let args = VersionUpdateEventArgs {
+                version: task.version,
+                flavor: task.flavor,
+                status: match task.status {
+                    TaskStatus::Completed => VersionStatus::Installed,
+                    TaskStatus::Failed(e) => VersionStatus::Failed(e),
+                    _ => VersionStatus::Installing,
+                },
+            };
+
+            f(args);
+        });
     }
 }

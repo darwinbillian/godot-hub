@@ -17,6 +17,12 @@ export type VersionStatus =
   | { type: "installed" }
   | { type: "failed"; error: Error };
 
+export interface VersionUpdateEventArgs {
+  name: string;
+  flavor: string;
+  status: VersionStatus;
+}
+
 export interface Install {
   id: string;
   dir: string;

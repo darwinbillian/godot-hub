@@ -7,7 +7,7 @@ use crate::{
     error::Error,
     services::{
         install::Install,
-        version::{Version, VersionStatus},
+        version::{Version, VersionStatus, VersionUpdateEventArgs},
     },
     state::AppState,
 };
@@ -32,6 +32,13 @@ pub enum VersionStatusDto {
     Installing,
     Installed,
     Failed { error: ErrorDto },
+}
+
+#[derive(Serialize, Debug)]
+pub struct VersionUpdateEventArgsDto {
+    name: String,
+    flavor: String,
+    status: VersionStatusDto,
 }
 
 #[derive(Serialize, Debug)]
@@ -71,6 +78,16 @@ impl From<VersionStatus> for VersionStatusDto {
             VersionStatus::Installing => VersionStatusDto::Installing,
             VersionStatus::Installed => VersionStatusDto::Installed,
             VersionStatus::Failed(e) => VersionStatusDto::Failed { error: e.into() },
+        }
+    }
+}
+
+impl From<VersionUpdateEventArgs> for VersionUpdateEventArgsDto {
+    fn from(value: VersionUpdateEventArgs) -> Self {
+        Self {
+            name: value.version,
+            flavor: value.flavor,
+            status: value.status.into(),
         }
     }
 }
