@@ -10,7 +10,7 @@ import {
   ExternalLinkIcon,
   OctagonAlertIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 export default function NewInstallPage() {
@@ -65,7 +65,7 @@ export default function NewInstallPage() {
   );
 }
 
-function VersionCard({ version }: { version: Version }) {
+const VersionCard = memo(({ version }: { version: Version }) => {
   const navigate = useNavigate();
 
   return (
@@ -121,4 +121,4 @@ function VersionCard({ version }: { version: Version }) {
       </div>
     </div>
   );
-}
+});
