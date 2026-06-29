@@ -1,5 +1,6 @@
 import {
   Install,
+  InstallRemoveEventArgs,
   InstallUpdateEventArgs,
   launch,
   listInstalls,
@@ -19,24 +20,10 @@ import { Link } from "react-router";
 export default function InstallListPage() {
   const [installs, setInstalls] = useState<Install[]>();
 
-  function updateInstalls() {
+  useEffect(() => {
     listInstalls()
       .then((installs) => setInstalls(installs))
       .catch((e) => console.error(e));
-  }
-
-  useEffect(() => {
-    updateInstalls();
-  }, []);
-
-  useEffect(() => {
-    const unlisten = listen("update_installs", () => {
-      updateInstalls();
-    });
-
-    return () => {
-      unlisten.then((fn) => fn());
-    };
   }, []);
 
   useEffect(() => {
@@ -51,6 +38,23 @@ export default function InstallListPage() {
                 ? { ...install, status: event.payload.status }
                 : install,
             ),
+        );
+      },
+    );
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<InstallRemoveEventArgs>(
+      "remove_install",
+      (event) => {
+        setInstalls(
+          (installs) =>
+            installs &&
+            installs.filter((install) => event.payload.id !== install.id),
         );
       },
     );

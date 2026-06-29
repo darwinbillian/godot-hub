@@ -68,6 +68,11 @@ pub struct InstallUpdateEventArgsDto {
     status: InstallStatusDto,
 }
 
+#[derive(Serialize, Debug)]
+pub struct InstallRemoveEventArgsDto {
+    id: String,
+}
+
 impl<E> From<E> for ErrorDto
 where
     E: Borrow<Error>,
@@ -167,13 +172,11 @@ pub async fn list_versions(state: State<'_, AppState>) -> Result<Vec<VersionDto>
 
 #[tauri::command]
 pub async fn install(
-    app: AppHandle,
     state: State<'_, AppState>,
     version: String,
     flavor: String,
 ) -> Result<(), ErrorDto> {
     state.install_service.install(&version, &flavor).await?;
-    app.emit("update_installs", ()).map_err(Error::from)?;
     Ok(())
 }
 
@@ -198,7 +201,8 @@ pub async fn uninstall(
 ) -> Result<(), ErrorDto> {
     let install = state.install_service.get(&id).await?;
     install.uninstall().await?;
-    app.emit("update_installs", ()).map_err(Error::from)?;
+    let args = InstallRemoveEventArgsDto { id };
+    app.emit("remove_install", &args).map_err(Error::from)?;
     Ok(())
 }
 

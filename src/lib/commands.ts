@@ -44,6 +44,10 @@ export interface InstallUpdateEventArgs {
   status: InstallStatus;
 }
 
+export interface InstallRemoveEventArgs {
+  id: string;
+}
+
 export function show(): Promise<void> {
   return invoke<void>("show");
 }
