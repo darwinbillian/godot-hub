@@ -13,7 +13,7 @@ import {
   PlayIcon,
   Trash2Icon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Link } from "react-router";
 
 export default function InstallListPage() {
@@ -85,7 +85,7 @@ export default function InstallListPage() {
   );
 }
 
-function InstallCard({ install }: { install: Install }) {
+const InstallCard = memo(({ install }: { install: Install }) => {
   return (
     <div className="card flex gap-2 p-4">
       <div className="flex flex-1 gap-2">
@@ -113,7 +113,7 @@ function InstallCard({ install }: { install: Install }) {
       )}
     </div>
   );
-}
+});
 
 function InstallButton({ install }: { install: Install }) {
   const [expand, setExpand] = useState(false);
