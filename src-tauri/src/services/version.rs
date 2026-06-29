@@ -1,22 +1,15 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use reqwest_middleware::ClientWithMiddleware;
 
 use crate::{
     error::Error,
-    services::{
-        install::InstallService,
-        task::{Task, TaskService, TaskStatus},
-    },
+    services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 
 pub struct VersionService {
     client: ClientWithMiddleware,
     install_service: InstallService,
-    task_service: TaskService,
     update_event: VersionUpdateEvent,
 }
 
@@ -35,7 +28,7 @@ pub enum VersionStatus {
 }
 
 pub struct VersionUpdateEvent {
-    task_service: TaskService,
+    install_service: InstallService,
 }
 
 pub struct VersionUpdateEventArgs {
@@ -45,16 +38,11 @@ pub struct VersionUpdateEventArgs {
 }
 
 impl VersionService {
-    pub fn new(
-        client: ClientWithMiddleware,
-        install_service: InstallService,
-        task_service: TaskService,
-    ) -> Self {
-        let update_event = VersionUpdateEvent::new(task_service.clone());
+    pub fn new(client: ClientWithMiddleware, install_service: InstallService) -> Self {
+        let update_event = VersionUpdateEvent::new(install_service.clone());
         Self {
             client,
             install_service,
-            task_service,
             update_event,
         }
     }
@@ -65,21 +53,14 @@ impl VersionService {
 
     pub async fn list(&self) -> Result<Vec<Version>, Error> {
         let versions = crate::godot_website::get_versions(&self.client).await?;
-        let installs = &self.list_installs().await?;
-        let tasks = &self.list_tasks();
+        let installs = self.list_installs().await?;
         Ok(versions
             .into_iter()
             .filter(|version| version.flavor == "stable")
             .map(|version| {
                 let key = (version.name.clone(), version.flavor.clone());
-                let status = if installs.contains(&key) {
-                    VersionStatus::Installed
-                } else if let Some(task) = tasks.get(&key) {
-                    match &task.status {
-                        TaskStatus::Completed => VersionStatus::Installed,
-                        TaskStatus::Failed(e) => VersionStatus::Failed(e.clone()),
-                        _ => VersionStatus::Installing,
-                    }
+                let status = if let Some(install) = installs.get(&key) {
+                    install.status.clone().into()
                 } else {
                     VersionStatus::Available
                 };
@@ -97,44 +78,46 @@ impl VersionService {
             .collect())
     }
 
-    async fn list_installs(&self) -> Result<HashSet<(String, String)>, Error> {
+    async fn list_installs(&self) -> Result<HashMap<(String, String), Install>, Error> {
         let installs = self.install_service.list().await?;
         Ok(installs
             .into_iter()
-            .map(|install| (install.version, install.flavor))
+            .map(|install| ((install.version.clone(), install.flavor.clone()), install))
             .collect())
-    }
-
-    fn list_tasks(&self) -> HashMap<(String, String), Task> {
-        let tasks = self.task_service.list();
-        tasks
-            .into_iter()
-            .map(|task| ((task.version.clone(), task.flavor.clone()), task))
-            .collect()
     }
 }
 
 impl VersionUpdateEvent {
-    pub fn new(task_service: TaskService) -> Self {
-        Self { task_service }
+    pub fn new(install_service: InstallService) -> Self {
+        Self { install_service }
     }
 
     pub fn subscribe<F>(&self, f: F)
     where
         F: Fn(VersionUpdateEventArgs) + Send + Sync + 'static,
     {
-        self.task_service.update_event().subscribe(move |task| {
-            let args = VersionUpdateEventArgs {
-                version: task.version,
-                flavor: task.flavor,
-                status: match task.status {
-                    TaskStatus::Completed => VersionStatus::Installed,
-                    TaskStatus::Failed(e) => VersionStatus::Failed(e),
-                    _ => VersionStatus::Installing,
-                },
-            };
-
-            f(args);
+        self.install_service.update_event().subscribe(move |args| {
+            f(args.into());
         });
+    }
+}
+
+impl From<InstallStatus> for VersionStatus {
+    fn from(value: InstallStatus) -> Self {
+        match value {
+            InstallStatus::Installing => VersionStatus::Installing,
+            InstallStatus::Installed => VersionStatus::Installed,
+            InstallStatus::Failed(e) => VersionStatus::Failed(e),
+        }
+    }
+}
+
+impl From<InstallUpdateEventArgs> for VersionUpdateEventArgs {
+    fn from(value: InstallUpdateEventArgs) -> Self {
+        Self {
+            version: value.version,
+            flavor: value.flavor,
+            status: value.status.into(),
+        }
     }
 }

@@ -1,5 +1,5 @@
 import {
-  Install,
+  Installation,
   launch,
   listInstalls,
   reveal,
@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 export default function InstallListPage() {
-  const [installs, setInstalls] = useState<Install[]>();
+  const [installs, setInstalls] = useState<Installation[]>();
 
   function updateInstalls() {
     listInstalls()
@@ -63,7 +63,7 @@ export default function InstallListPage() {
   );
 }
 
-function InstallCard({ install }: { install: Install }) {
+function InstallCard({ install }: { install: Installation }) {
   return (
     <div className="card flex gap-2 p-4">
       <div className="flex flex-1 gap-2">
@@ -80,7 +80,7 @@ function InstallCard({ install }: { install: Install }) {
   );
 }
 
-function InstallButton({ install }: { install: Install }) {
+function InstallButton({ install }: { install: Installation }) {
   const [expand, setExpand] = useState(false);
 
   return (

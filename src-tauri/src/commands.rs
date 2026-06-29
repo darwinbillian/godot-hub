@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter, State, Window};
 use crate::{
     error::Error,
     services::{
-        install::Install,
+        install::Installation,
         version::{Version, VersionStatus, VersionUpdateEventArgs},
     },
     state::AppState,
@@ -42,7 +42,7 @@ pub struct VersionUpdateEventArgsDto {
 }
 
 #[derive(Serialize, Debug)]
-pub struct InstallDto {
+pub struct InstallationDto {
     id: String,
     version: String,
     flavor: String,
@@ -92,8 +92,8 @@ impl From<VersionUpdateEventArgs> for VersionUpdateEventArgsDto {
     }
 }
 
-impl From<Install> for InstallDto {
-    fn from(value: Install) -> Self {
+impl From<Installation> for InstallationDto {
+    fn from(value: Installation) -> Self {
         Self {
             id: value.id,
             version: value.version,
@@ -127,9 +127,9 @@ pub async fn install(
 }
 
 #[tauri::command]
-pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallDto>, ErrorDto> {
-    let installs = state.install_service.list().await?;
-    Ok(installs.into_iter().map(InstallDto::from).collect())
+pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallationDto>, ErrorDto> {
+    let installs = state.install_service.list_installations().await?;
+    Ok(installs.into_iter().map(InstallationDto::from).collect())
 }
 
 #[tauri::command]

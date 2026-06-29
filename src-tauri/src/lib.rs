@@ -50,11 +50,7 @@ pub fn run() {
                 local_data_dir.join("installs"),
             );
 
-            let version_service = VersionService::new(
-                client.clone(),
-                install_service.clone(),
-                task_service.clone(),
-            );
+            let version_service = VersionService::new(client.clone(), install_service.clone());
 
             {
                 let handle = app.handle().clone();
