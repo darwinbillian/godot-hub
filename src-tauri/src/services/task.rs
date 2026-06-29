@@ -11,15 +11,22 @@ pub struct TaskService {
 }
 
 pub struct TaskServiceInner {
-    tasks: Mutex<HashMap<String, Task>>,
+    tasks: Mutex<HashMap<String, TaskHandle>>,
+}
+
+pub struct Task {
+    pub id: String,
+    pub version: String,
+    pub flavor: String,
+    pub status: TaskStatus,
 }
 
 #[derive(Clone)]
-pub struct Task {
-    inner: Arc<TaskInner>,
+pub struct TaskHandle {
+    inner: Arc<TaskHandleInner>,
 }
 
-pub struct TaskInner {
+pub struct TaskHandleInner {
     id: String,
     version: String,
     flavor: String,
@@ -47,23 +54,24 @@ impl TaskService {
     where
         F: AsyncFnOnce() -> Result<(), Error>,
     {
+        let id = task.id.clone();
+        let handle = TaskHandle::from(task);
+
         {
             let mut tasks = self.inner.tasks.lock().unwrap();
-            tasks.insert(task.id(), task.clone());
+            tasks.insert(id.clone(), handle.clone());
         }
 
-        task.set_status(TaskStatus::Running);
+        handle.set_status(TaskStatus::Running);
 
         match f().await {
             Ok(_) => {
-                task.set_status(TaskStatus::Completed);
+                handle.set_status(TaskStatus::Completed);
 
-                {
-                    let mut tasks = self.inner.tasks.lock().unwrap();
-                    tasks.remove(&task.id());
-                }
+                let mut tasks = self.inner.tasks.lock().unwrap();
+                tasks.remove(&id);
             }
-            Err(e) => task.set_status(TaskStatus::Failed(Arc::new(e))),
+            Err(e) => handle.set_status(TaskStatus::Failed(Arc::new(e))),
         }
 
         Ok(())
@@ -71,37 +79,40 @@ impl TaskService {
 
     pub fn list(&self) -> Vec<Task> {
         let tasks = self.inner.tasks.lock().unwrap();
-        tasks.values().cloned().collect()
+        tasks.values().map(Task::from).collect()
     }
 }
 
 impl Task {
     pub fn new(id: &str, version: &str, flavor: &str) -> Self {
         Task {
-            inner: Arc::new(TaskInner {
-                id: id.to_owned(),
-                version: version.to_owned(),
-                flavor: flavor.to_owned(),
-                status: Mutex::new(TaskStatus::Pending),
-            }),
+            id: id.to_owned(),
+            version: version.to_owned(),
+            flavor: flavor.to_owned(),
+            status: TaskStatus::Pending,
         }
     }
 
-    pub fn id(&self) -> String {
-        self.inner.id.clone()
+    pub fn from(task: &TaskHandle) -> Self {
+        Self {
+            id: task.inner.id.clone(),
+            version: task.inner.version.clone(),
+            flavor: task.inner.flavor.clone(),
+            status: task.inner.status.lock().unwrap().clone(),
+        }
     }
+}
 
-    pub fn version(&self) -> String {
-        self.inner.version.clone()
-    }
-
-    pub fn flavor(&self) -> String {
-        self.inner.flavor.clone()
-    }
-
-    pub fn status(&self) -> TaskStatus {
-        let inner = self.inner.status.lock().unwrap();
-        inner.clone()
+impl TaskHandle {
+    pub fn from(task: Task) -> Self {
+        Self {
+            inner: Arc::new(TaskHandleInner {
+                id: task.id,
+                version: task.version,
+                flavor: task.flavor,
+                status: Mutex::new(task.status),
+            }),
+        }
     }
 
     pub fn set_status(&self, status: TaskStatus) {

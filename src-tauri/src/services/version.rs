@@ -58,9 +58,9 @@ impl VersionService {
                 let status = if installs.contains(&key) {
                     VersionStatus::Installed
                 } else if let Some(task) = tasks.get(&key) {
-                    match task.status() {
+                    match &task.status {
                         TaskStatus::Completed => VersionStatus::Installed,
-                        TaskStatus::Failed(e) => VersionStatus::Failed(e),
+                        TaskStatus::Failed(e) => VersionStatus::Failed(e.clone()),
                         _ => VersionStatus::Installing,
                     }
                 } else {
@@ -92,7 +92,7 @@ impl VersionService {
         let tasks = self.task_service.list();
         tasks
             .into_iter()
-            .map(|task| ((task.version(), task.flavor()), task))
+            .map(|task| ((task.version.clone(), task.flavor.clone()), task))
             .collect()
     }
 }
