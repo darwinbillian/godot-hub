@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -119,30 +120,34 @@ impl InstallService {
     }
 
     pub async fn list(&self) -> Result<Vec<Install>, Error> {
-        let tasks = self
-            .inner
-            .task_service
-            .list()
-            .into_iter()
-            .map(|task| Install {
+        let mut installs = HashMap::<String, Install>::new();
+
+        let installations = self.list_installations().await?;
+        let tasks = self.inner.task_service.list();
+
+        for task in tasks {
+            let install = Install {
                 id: task.id,
                 flavor: task.flavor,
                 version: task.version,
                 status: task.status.into(),
-            });
+            };
+            installs.insert(install.id.clone(), install);
+        }
 
-        let installations = self
-            .list_installations()
-            .await?
-            .into_iter()
-            .map(|installation| Install {
+        for installation in installations {
+            let install = Install {
                 id: installation.id.clone(),
                 version: installation.version.clone(),
                 flavor: installation.flavor.clone(),
                 status: InstallStatus::Installed(Arc::new(installation)),
-            });
+            };
+            installs.insert(install.id.clone(), install);
+        }
 
-        Ok(tasks.chain(installations).collect())
+        let mut installs = installs.into_values().collect::<Vec<Install>>();
+        installs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
+        Ok(installs)
     }
 
     pub async fn get(&self, id: &str) -> Result<Installation, Error> {
