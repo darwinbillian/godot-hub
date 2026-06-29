@@ -44,9 +44,9 @@ pub struct VersionUpdateEventArgsDto {
 #[derive(Serialize, Debug)]
 pub struct InstallDto {
     id: String,
-    dir: String,
     version: String,
     flavor: String,
+    dir: String,
 }
 
 impl<E> From<E> for ErrorDto
@@ -96,9 +96,9 @@ impl From<Install> for InstallDto {
     fn from(value: Install) -> Self {
         Self {
             id: value.id,
+            version: value.version,
+            flavor: value.flavor,
             dir: value.dir.to_string_lossy().into_owned(),
-            version: value.metadata.version,
-            flavor: value.metadata.flavor,
         }
     }
 }

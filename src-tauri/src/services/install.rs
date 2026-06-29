@@ -27,8 +27,10 @@ pub struct InstallServiceInner {
 
 pub struct Install {
     pub id: String,
+    pub version: String,
+    pub flavor: String,
     pub dir: PathBuf,
-    pub metadata: InstallMetadata,
+    pub executable: PathBuf,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -101,7 +103,14 @@ impl InstallService {
                 Err(_) => continue,
             };
 
-            let install = Install { id, dir, metadata };
+            let executable = dir.join(metadata.executable);
+            let install = Install {
+                id,
+                version: metadata.version,
+                flavor: metadata.flavor,
+                dir,
+                executable,
+            };
             installs.push(install);
         }
 
@@ -111,10 +120,13 @@ impl InstallService {
     pub async fn get(&self, id: &str) -> Result<Install, Error> {
         let dir = self.inner.dir.join(id);
         let metadata = InstallMetadata::load(&dir).await?;
+        let executable = dir.join(metadata.executable);
         let install = Install {
             id: id.to_owned(),
+            version: metadata.version,
+            flavor: metadata.flavor,
             dir,
-            metadata,
+            executable,
         };
         Ok(install)
     }
@@ -129,8 +141,7 @@ impl InstallService {
 
 impl Install {
     pub async fn launch(&self) -> Result<(), Error> {
-        let executable = self.dir.join(&self.metadata.executable);
-        Command::new(executable).spawn()?;
+        Command::new(&self.executable).spawn()?;
         Ok(())
     }
 
@@ -140,8 +151,7 @@ impl Install {
     }
 
     pub async fn reveal(&self) -> Result<(), Error> {
-        let executable = self.dir.join(&self.metadata.executable);
-        tauri_plugin_opener::reveal_item_in_dir(executable)?;
+        tauri_plugin_opener::reveal_item_in_dir(&self.executable)?;
         Ok(())
     }
 }

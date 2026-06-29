@@ -25,9 +25,9 @@ export interface VersionUpdateEventArgs {
 
 export interface Install {
   id: string;
-  dir: string;
   version: string;
   flavor: string;
+  dir: string;
 }
 
 export function show(): Promise<void> {

@@ -101,7 +101,7 @@ impl VersionService {
         let installs = self.install_service.list().await?;
         Ok(installs
             .into_iter()
-            .map(|install| (install.metadata.version, install.metadata.flavor))
+            .map(|install| (install.version, install.flavor))
             .collect())
     }
 
