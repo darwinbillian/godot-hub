@@ -60,6 +60,7 @@ pub struct InstallUpdateEvent {
 }
 
 pub struct InstallUpdateEventArgs {
+    pub id: String,
     pub version: String,
     pub flavor: String,
     pub status: InstallStatus,
@@ -266,6 +267,7 @@ impl From<TaskStatus> for InstallStatus {
 impl From<TaskUpdateEventArgs> for InstallUpdateEventArgs {
     fn from(value: TaskUpdateEventArgs) -> Self {
         Self {
+            id: value.id,
             version: value.version,
             flavor: value.flavor,
             status: value.status.into(),

@@ -49,6 +49,7 @@ pub struct TaskUpdateEvent {
 
 #[derive(Clone)]
 pub struct TaskUpdateEventArgs {
+    pub id: String,
     pub version: String,
     pub flavor: String,
     pub status: TaskStatus,
@@ -180,6 +181,7 @@ impl TaskUpdateEvent {
 impl TaskUpdateEventArgs {
     pub fn from(task: &TaskHandle) -> Self {
         Self {
+            id: task.inner.id.clone(),
             version: task.inner.version.clone(),
             flavor: task.inner.flavor.clone(),
             status: task.inner.status.lock().unwrap().clone(),

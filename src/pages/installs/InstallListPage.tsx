@@ -1,5 +1,6 @@
 import {
   Install,
+  InstallUpdateEventArgs,
   launch,
   listInstalls,
   reveal,
@@ -32,6 +33,27 @@ export default function InstallListPage() {
     const unlisten = listen("update_installs", () => {
       updateInstalls();
     });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<InstallUpdateEventArgs>(
+      "update_install",
+      (event) => {
+        setInstalls(
+          (installs) =>
+            installs &&
+            installs.map((install) =>
+              event.payload.id === install.id
+                ? { ...install, status: event.payload.status }
+                : install,
+            ),
+        );
+      },
+    );
 
     return () => {
       unlisten.then((fn) => fn());

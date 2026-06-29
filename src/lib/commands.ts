@@ -39,6 +39,11 @@ export interface Installation {
   dir: string;
 }
 
+export interface InstallUpdateEventArgs {
+  id: string;
+  status: InstallStatus;
+}
+
 export function show(): Promise<void> {
   return invoke<void>("show");
 }

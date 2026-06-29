@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter, State, Window};
 use crate::{
     error::Error,
     services::{
-        install::{Install, InstallStatus, Installation},
+        install::{Install, InstallStatus, InstallUpdateEventArgs, Installation},
         version::{Version, VersionStatus, VersionUpdateEventArgs},
     },
     state::AppState,
@@ -60,6 +60,12 @@ pub enum InstallStatusDto {
 #[derive(Serialize, Debug)]
 pub struct InstallationDto {
     dir: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct InstallUpdateEventArgsDto {
+    id: String,
+    status: InstallStatusDto,
 }
 
 impl<E> From<E> for ErrorDto
@@ -135,6 +141,15 @@ where
     fn from(value: I) -> Self {
         Self {
             dir: value.borrow().dir.to_string_lossy().into_owned(),
+        }
+    }
+}
+
+impl From<InstallUpdateEventArgs> for InstallUpdateEventArgsDto {
+    fn from(value: InstallUpdateEventArgs) -> Self {
+        Self {
+            id: value.id,
+            status: value.status.into(),
         }
     }
 }
