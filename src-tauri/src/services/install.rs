@@ -27,6 +27,7 @@ pub struct InstallServiceInner {
 }
 
 pub struct Install {
+    pub id: String,
     pub version: String,
     pub flavor: String,
     pub status: InstallStatus,
@@ -35,7 +36,7 @@ pub struct Install {
 #[derive(Clone)]
 pub enum InstallStatus {
     Installing,
-    Installed,
+    Installed(Arc<Installation>),
     Failed(Arc<Error>),
 }
 
@@ -87,10 +88,10 @@ impl InstallService {
 
         self.inner
             .task_service
-            .start(task, async || -> Result<(), Error> {
+            .start(task, async || -> Result<Installation, Error> {
                 let download_path = self.download(version, flavor).await?;
 
-                let dir = self.inner.dir.join(id);
+                let dir = self.inner.dir.join(&id);
                 crate::utils::zip::extract(download_path, &dir).await?;
 
                 let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
@@ -101,7 +102,15 @@ impl InstallService {
                 };
                 metadata.save(&dir).await?;
 
-                Ok(())
+                let executable = dir.join(metadata.executable);
+                let installation = Installation {
+                    id,
+                    version: metadata.version,
+                    flavor: metadata.flavor,
+                    dir,
+                    executable,
+                };
+                Ok(installation)
             })
             .await?;
 
@@ -115,6 +124,7 @@ impl InstallService {
             .list()
             .into_iter()
             .map(|task| Install {
+                id: task.id,
                 flavor: task.flavor,
                 version: task.version,
                 status: task.status.into(),
@@ -125,15 +135,37 @@ impl InstallService {
             .await?
             .into_iter()
             .map(|installation| Install {
+                id: installation.id.clone(),
                 version: installation.version.clone(),
                 flavor: installation.flavor.clone(),
-                status: InstallStatus::Installed,
+                status: InstallStatus::Installed(Arc::new(installation)),
             });
 
         Ok(tasks.chain(installations).collect())
     }
 
-    pub async fn list_installations(&self) -> Result<Vec<Installation>, Error> {
+    pub async fn get(&self, id: &str) -> Result<Installation, Error> {
+        let dir = self.inner.dir.join(id);
+        let metadata = InstallationMetadata::load(&dir).await?;
+        let executable = dir.join(metadata.executable);
+        let install = Installation {
+            id: id.to_owned(),
+            version: metadata.version,
+            flavor: metadata.flavor,
+            dir,
+            executable,
+        };
+        Ok(install)
+    }
+
+    async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
+        let url = format!("https://downloads.godotengine.org/?version={}&flavor={}&slug=win64.exe.zip&platform=windows.64", version, flavor);
+        let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
+        let path = self.inner.download_service.download(&url, &name).await?;
+        Ok(path)
+    }
+
+    async fn list_installations(&self) -> Result<Vec<Installation>, Error> {
         let mut installations = Vec::<Installation>::new();
 
         let mut entries = match tokio::fs::read_dir(&self.inner.dir).await {
@@ -170,27 +202,6 @@ impl InstallService {
         }
 
         Ok(installations)
-    }
-
-    pub async fn get(&self, id: &str) -> Result<Installation, Error> {
-        let dir = self.inner.dir.join(id);
-        let metadata = InstallationMetadata::load(&dir).await?;
-        let executable = dir.join(metadata.executable);
-        let install = Installation {
-            id: id.to_owned(),
-            version: metadata.version,
-            flavor: metadata.flavor,
-            dir,
-            executable,
-        };
-        Ok(install)
-    }
-
-    async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
-        let url = format!("https://downloads.godotengine.org/?version={}&flavor={}&slug=win64.exe.zip&platform=windows.64", version, flavor);
-        let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
-        let path = self.inner.download_service.download(&url, &name).await?;
-        Ok(path)
     }
 }
 
@@ -245,7 +256,7 @@ impl InstallUpdateEvent {
 impl From<TaskStatus> for InstallStatus {
     fn from(value: TaskStatus) -> Self {
         match value {
-            TaskStatus::Completed => InstallStatus::Installed,
+            TaskStatus::Completed(installation) => InstallStatus::Installed(installation),
             TaskStatus::Failed(e) => InstallStatus::Failed(e),
             _ => InstallStatus::Installing,
         }

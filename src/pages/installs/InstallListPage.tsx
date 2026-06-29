@@ -1,5 +1,5 @@
 import {
-  Installation,
+  Install,
   launch,
   listInstalls,
   reveal,
@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 export default function InstallListPage() {
-  const [installs, setInstalls] = useState<Installation[]>();
+  const [installs, setInstalls] = useState<Install[]>();
 
   function updateInstalls() {
     listInstalls()
@@ -63,24 +63,37 @@ export default function InstallListPage() {
   );
 }
 
-function InstallCard({ install }: { install: Installation }) {
+function InstallCard({ install }: { install: Install }) {
   return (
     <div className="card flex gap-2 p-4">
       <div className="flex flex-1 gap-2">
         <img className="size-8" src="/icon.svg" />
         <div>
           <div className="font-semibold">Godot {install.version}</div>
-          <div className="text-sm text-neutral-400">{install.dir}</div>
+          <div className="text-sm text-neutral-400">
+            {install.status.type === "installed" ? (
+              <span>{install.status.installation.dir}</span>
+            ) : install.status.type === "failed" ? (
+              <details>
+                <summary>Failed</summary>
+                <p className="text-red-400">{install.status.error.message}</p>
+              </details>
+            ) : (
+              <span>In progress</span>
+            )}
+          </div>
         </div>
       </div>
-      <div>
-        <InstallButton install={install} />
-      </div>
+      {install.status.type === "installed" && (
+        <div>
+          <InstallButton install={install} />
+        </div>
+      )}
     </div>
   );
 }
 
-function InstallButton({ install }: { install: Installation }) {
+function InstallButton({ install }: { install: Install }) {
   const [expand, setExpand] = useState(false);
 
   return (

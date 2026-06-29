@@ -23,10 +23,19 @@ export interface VersionUpdateEventArgs {
   status: VersionStatus;
 }
 
-export interface Installation {
+export interface Install {
   id: string;
   version: string;
   flavor: string;
+  status: InstallStatus;
+}
+
+export type InstallStatus =
+  | { type: "installing" }
+  | { type: "installed"; installation: Installation }
+  | { type: "failed"; error: Error };
+
+export interface Installation {
   dir: string;
 }
 
@@ -45,8 +54,8 @@ export function install(version: string, flavor: string): Promise<void> {
   });
 }
 
-export function listInstalls(): Promise<Installation[]> {
-  return invoke<Installation[]>("list_installs");
+export function listInstalls(): Promise<Install[]> {
+  return invoke<Install[]>("list_installs");
 }
 
 export function launch(id: string): Promise<void> {

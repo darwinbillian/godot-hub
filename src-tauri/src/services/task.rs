@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::error::Error;
+use crate::{error::Error, services::install::Installation};
 
 #[derive(Clone)]
 pub struct TaskService {
@@ -39,7 +39,7 @@ pub struct TaskHandleInner {
 pub enum TaskStatus {
     Pending,
     Running,
-    Completed,
+    Completed(Arc<Installation>),
     Failed(Arc<Error>),
 }
 
@@ -70,7 +70,7 @@ impl TaskService {
 
     pub async fn start<F>(&self, task: Task, f: F) -> Result<(), Error>
     where
-        F: AsyncFnOnce() -> Result<(), Error>,
+        F: AsyncFnOnce() -> Result<Installation, Error>,
     {
         let id = task.id.clone();
         let handle = TaskHandle::from(task);
@@ -88,8 +88,8 @@ impl TaskService {
         handle.set_status(TaskStatus::Running);
 
         match f().await {
-            Ok(_) => {
-                handle.set_status(TaskStatus::Completed);
+            Ok(installation) => {
+                handle.set_status(TaskStatus::Completed(Arc::new(installation)));
 
                 let mut tasks = self.inner.tasks.lock().unwrap();
                 tasks.remove(&id);

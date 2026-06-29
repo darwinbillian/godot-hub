@@ -106,7 +106,7 @@ impl From<InstallStatus> for VersionStatus {
     fn from(value: InstallStatus) -> Self {
         match value {
             InstallStatus::Installing => VersionStatus::Installing,
-            InstallStatus::Installed => VersionStatus::Installed,
+            InstallStatus::Installed(_) => VersionStatus::Installed,
             InstallStatus::Failed(e) => VersionStatus::Failed(e),
         }
     }

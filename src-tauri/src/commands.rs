@@ -6,7 +6,7 @@ use tauri::{AppHandle, Emitter, State, Window};
 use crate::{
     error::Error,
     services::{
-        install::Installation,
+        install::{Install, InstallStatus, Installation},
         version::{Version, VersionStatus, VersionUpdateEventArgs},
     },
     state::AppState,
@@ -42,10 +42,23 @@ pub struct VersionUpdateEventArgsDto {
 }
 
 #[derive(Serialize, Debug)]
-pub struct InstallationDto {
+pub struct InstallDto {
     id: String,
     version: String,
     flavor: String,
+    status: InstallStatusDto,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InstallStatusDto {
+    Installing,
+    Installed { installation: InstallationDto },
+    Failed { error: ErrorDto },
+}
+
+#[derive(Serialize, Debug)]
+pub struct InstallationDto {
     dir: String,
 }
 
@@ -92,13 +105,36 @@ impl From<VersionUpdateEventArgs> for VersionUpdateEventArgsDto {
     }
 }
 
-impl From<Installation> for InstallationDto {
-    fn from(value: Installation) -> Self {
+impl From<Install> for InstallDto {
+    fn from(value: Install) -> Self {
         Self {
             id: value.id,
             version: value.version,
             flavor: value.flavor,
-            dir: value.dir.to_string_lossy().into_owned(),
+            status: value.status.into(),
+        }
+    }
+}
+
+impl From<InstallStatus> for InstallStatusDto {
+    fn from(value: InstallStatus) -> Self {
+        match value {
+            InstallStatus::Installing => InstallStatusDto::Installing,
+            InstallStatus::Installed(installation) => InstallStatusDto::Installed {
+                installation: installation.into(),
+            },
+            InstallStatus::Failed(e) => InstallStatusDto::Failed { error: e.into() },
+        }
+    }
+}
+
+impl<I> From<I> for InstallationDto
+where
+    I: Borrow<Installation>,
+{
+    fn from(value: I) -> Self {
+        Self {
+            dir: value.borrow().dir.to_string_lossy().into_owned(),
         }
     }
 }
@@ -127,9 +163,9 @@ pub async fn install(
 }
 
 #[tauri::command]
-pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallationDto>, ErrorDto> {
-    let installs = state.install_service.list_installations().await?;
-    Ok(installs.into_iter().map(InstallationDto::from).collect())
+pub async fn list_installs(state: State<'_, AppState>) -> Result<Vec<InstallDto>, ErrorDto> {
+    let installs = state.install_service.list().await?;
+    Ok(installs.into_iter().map(InstallDto::from).collect())
 }
 
 #[tauri::command]
