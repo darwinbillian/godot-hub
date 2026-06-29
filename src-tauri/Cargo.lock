@@ -1560,7 +1560,7 @@ dependencies = [
 
 [[package]]
 name = "godot-hub"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "http-cache-reqwest",
  "reqwest 0.12.28",
