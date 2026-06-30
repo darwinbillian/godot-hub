@@ -32,7 +32,7 @@ pub struct VersionUpdateEvent {
 }
 
 pub struct VersionUpdateEventArgs {
-    pub version: String,
+    pub name: String,
     pub flavor: String,
     pub status: VersionStatus,
 }
@@ -115,7 +115,7 @@ impl From<InstallStatus> for VersionStatus {
 impl From<InstallUpdateEventArgs> for VersionUpdateEventArgs {
     fn from(value: InstallUpdateEventArgs) -> Self {
         Self {
-            version: value.version,
+            name: value.version,
             flavor: value.flavor,
             status: value.status.into(),
         }

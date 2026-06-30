@@ -1,6 +1,6 @@
-mod commands;
 mod error;
 mod godot_website;
+mod ipc;
 mod services;
 mod state;
 mod utils;
@@ -11,7 +11,7 @@ use reqwest_middleware::ClientBuilder;
 use tauri::{Emitter, Manager};
 
 use crate::{
-    commands::{InstallRemoveEventArgsDto, InstallUpdateEventArgsDto, VersionUpdateEventArgsDto},
+    ipc::dtos::{InstallRemoveEventArgsDto, InstallUpdateEventArgsDto, VersionUpdateEventArgsDto},
     services::{
         download::DownloadService, install::InstallService, task::TaskService,
         version::VersionService,
@@ -82,13 +82,13 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::show,
-            commands::list_versions,
-            commands::install,
-            commands::list_installs,
-            commands::launch,
-            commands::uninstall,
-            commands::reveal
+            ipc::commands::show,
+            ipc::commands::list_versions,
+            ipc::commands::install,
+            ipc::commands::list_installs,
+            ipc::commands::launch,
+            ipc::commands::uninstall,
+            ipc::commands::reveal
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
