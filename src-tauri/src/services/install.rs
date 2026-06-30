@@ -146,7 +146,7 @@ impl InstallService {
         }
 
         let mut installs = installs.into_values().collect::<Vec<Install>>();
-        installs.sort_unstable_by(|a, b| a.id.cmp(&b.id));
+        installs.sort_unstable_by(|a, b| b.id.cmp(&a.id));
         Ok(installs)
     }
 
