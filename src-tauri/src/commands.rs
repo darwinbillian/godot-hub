@@ -1,12 +1,14 @@
 use std::borrow::Borrow;
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, State, Window};
+use tauri::{State, Window};
 
 use crate::{
     error::Error,
     services::{
-        install::{Install, InstallStatus, InstallUpdateEventArgs, Installation},
+        install::{
+            Install, InstallRemoveEventArgs, InstallStatus, InstallUpdateEventArgs, Installation,
+        },
         version::{Version, VersionStatus, VersionUpdateEventArgs},
     },
     state::AppState,
@@ -159,6 +161,12 @@ impl From<InstallUpdateEventArgs> for InstallUpdateEventArgsDto {
     }
 }
 
+impl From<InstallRemoveEventArgs> for InstallRemoveEventArgsDto {
+    fn from(value: InstallRemoveEventArgs) -> Self {
+        Self { id: value.id }
+    }
+}
+
 #[tauri::command]
 pub async fn show(window: Window) {
     window.show().unwrap()
@@ -194,15 +202,9 @@ pub async fn launch(state: State<'_, AppState>, id: String) -> Result<(), ErrorD
 }
 
 #[tauri::command]
-pub async fn uninstall(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<(), ErrorDto> {
+pub async fn uninstall(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
     let install = state.install_service.get(&id).await?;
     install.uninstall().await?;
-    let args = InstallRemoveEventArgsDto { id };
-    app.emit("remove_install", &args).map_err(Error::from)?;
     Ok(())
 }
 

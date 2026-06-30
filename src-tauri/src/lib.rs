@@ -11,7 +11,7 @@ use reqwest_middleware::ClientBuilder;
 use tauri::{Emitter, Manager};
 
 use crate::{
-    commands::{InstallUpdateEventArgsDto, VersionUpdateEventArgsDto},
+    commands::{InstallRemoveEventArgsDto, InstallUpdateEventArgsDto, VersionUpdateEventArgsDto},
     services::{
         download::DownloadService, install::InstallService, task::TaskService,
         version::VersionService,
@@ -54,6 +54,13 @@ pub fn run() {
                 let handle = app.handle().clone();
                 install_service.update_event().subscribe(move |args| {
                     let _ = handle.emit("update_install", &InstallUpdateEventArgsDto::from(args));
+                });
+            }
+
+            {
+                let handle = app.handle().clone();
+                install_service.remove_event().subscribe(move |args| {
+                    let _ = handle.emit("remove_install", &InstallRemoveEventArgsDto::from(args));
                 });
             }
 

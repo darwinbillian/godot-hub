@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use serde::{Deserialize, Serialize};
@@ -24,6 +24,7 @@ pub struct InstallServiceInner {
     download_service: DownloadService,
     task_service: TaskService,
     update_event: InstallUpdateEvent,
+    remove_event: InstallRemoveEvent,
     dir: PathBuf,
 }
 
@@ -49,8 +50,10 @@ pub struct Installation {
 }
 
 pub struct InstallationHandle {
-    pub dir: PathBuf,
-    pub executable: PathBuf,
+    remove_event: InstallRemoveEvent,
+    id: String,
+    dir: PathBuf,
+    executable: PathBuf,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -71,6 +74,15 @@ pub struct InstallUpdateEventArgs {
     pub status: InstallStatus,
 }
 
+pub struct InstallRemoveEvent {
+    callback: Mutex<Vec<Arc<dyn Fn(InstallRemoveEventArgs) + Send + Sync>>>,
+}
+
+#[derive(Clone)]
+pub struct InstallRemoveEventArgs {
+    pub id: String,
+}
+
 impl InstallService {
     pub fn new(download_service: DownloadService, task_service: TaskService, dir: PathBuf) -> Self {
         let update_event = InstallUpdateEvent::new(task_service.clone());
@@ -79,6 +91,7 @@ impl InstallService {
                 download_service,
                 task_service,
                 update_event,
+                remove_event: InstallRemoveEvent::new(),
                 dir,
             }),
         }
@@ -86,6 +99,10 @@ impl InstallService {
 
     pub fn update_event(&self) -> &InstallUpdateEvent {
         &self.inner.update_event
+    }
+
+    pub fn remove_event(&self) -> &InstallRemoveEvent {
+        &self.inner.remove_event
     }
 
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
@@ -155,8 +172,13 @@ impl InstallService {
     pub async fn get(&self, id: &str) -> Result<InstallationHandle, Error> {
         let dir = self.inner.dir.join(id);
         let metadata = InstallationMetadata::load(&dir).await?;
-        let executable = dir.join(metadata.executable);
-        let install = InstallationHandle { dir, executable };
+        let install = InstallationHandle::new(id, &dir, &metadata.executable);
+
+        let inner = self.inner.clone();
+        install.remove_event().subscribe(move |args| {
+            inner.remove_event.invoke(args);
+        });
+
         Ok(install)
     }
 
@@ -206,6 +228,19 @@ impl InstallService {
 }
 
 impl InstallationHandle {
+    pub fn new(id: &str, dir: &Path, executable: &str) -> Self {
+        Self {
+            remove_event: InstallRemoveEvent::new(),
+            id: id.to_owned(),
+            dir: dir.to_owned(),
+            executable: dir.join(executable),
+        }
+    }
+
+    pub fn remove_event(&self) -> &InstallRemoveEvent {
+        &self.remove_event
+    }
+
     pub async fn launch(&self) -> Result<(), Error> {
         Command::new(&self.executable).spawn()?;
         Ok(())
@@ -213,6 +248,12 @@ impl InstallationHandle {
 
     pub async fn uninstall(&self) -> Result<(), Error> {
         tokio::fs::remove_dir_all(&self.dir).await?;
+
+        let args = InstallRemoveEventArgs {
+            id: self.id.clone(),
+        };
+        self.remove_event.invoke(args);
+
         Ok(())
     }
 
@@ -250,6 +291,29 @@ impl InstallUpdateEvent {
         self.task_service.update_event().subscribe(move |args| {
             f(args.into());
         });
+    }
+}
+
+impl InstallRemoveEvent {
+    pub fn new() -> Self {
+        Self {
+            callback: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub fn subscribe<F>(&self, f: F)
+    where
+        F: Fn(InstallRemoveEventArgs) + Send + Sync + 'static,
+    {
+        let mut callback = self.callback.lock().unwrap();
+        callback.push(Arc::new(f));
+    }
+
+    pub fn invoke(&self, args: InstallRemoveEventArgs) {
+        let callback = self.callback.lock().unwrap().clone();
+        for f in callback {
+            f(args.clone());
+        }
     }
 }
 
