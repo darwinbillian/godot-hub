@@ -1,5 +1,5 @@
 import RootLayout from "@/layouts/RootLayout";
-import { show } from "@/lib/commands";
+import { show } from "@/lib/ipc/commands";
 import InstallListPage from "@/pages/installs/InstallListPage";
 import NewInstallPage from "@/pages/installs/NewInstallPage";
 import { useEffect } from "react";
