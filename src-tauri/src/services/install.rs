@@ -46,6 +46,10 @@ pub struct Installation {
     pub version: String,
     pub flavor: String,
     pub dir: PathBuf,
+}
+
+pub struct InstallationHandle {
+    pub dir: PathBuf,
     pub executable: PathBuf,
 }
 
@@ -104,13 +108,11 @@ impl InstallService {
                 };
                 metadata.save(&dir).await?;
 
-                let executable = dir.join(metadata.executable);
                 let installation = Installation {
                     id,
                     version: metadata.version,
                     flavor: metadata.flavor,
                     dir,
-                    executable,
                 };
                 Ok(installation)
             })
@@ -150,17 +152,11 @@ impl InstallService {
         Ok(installs)
     }
 
-    pub async fn get(&self, id: &str) -> Result<Installation, Error> {
+    pub async fn get(&self, id: &str) -> Result<InstallationHandle, Error> {
         let dir = self.inner.dir.join(id);
         let metadata = InstallationMetadata::load(&dir).await?;
         let executable = dir.join(metadata.executable);
-        let install = Installation {
-            id: id.to_owned(),
-            version: metadata.version,
-            flavor: metadata.flavor,
-            dir,
-            executable,
-        };
+        let install = InstallationHandle { dir, executable };
         Ok(install)
     }
 
@@ -196,13 +192,11 @@ impl InstallService {
                 Err(_) => continue,
             };
 
-            let executable = dir.join(metadata.executable);
             let installation = Installation {
                 id,
                 version: metadata.version,
                 flavor: metadata.flavor,
                 dir,
-                executable,
             };
             installations.push(installation);
         }
@@ -211,7 +205,7 @@ impl InstallService {
     }
 }
 
-impl Installation {
+impl InstallationHandle {
     pub async fn launch(&self) -> Result<(), Error> {
         Command::new(&self.executable).spawn()?;
         Ok(())
