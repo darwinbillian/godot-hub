@@ -1,21 +1,17 @@
-use std::{
-    borrow::Borrow,
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
 use reqwest_middleware::ClientWithMiddleware;
 
 use crate::{
     error::Error,
-    event::EventHandler,
+    event::EventAdapter,
     services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 
 pub struct VersionService {
     client: ClientWithMiddleware,
     install_service: InstallService,
-    update_event: VersionUpdateEvent,
+    update_event: EventAdapter<VersionUpdateEventArgs>,
 }
 
 pub struct Version {
@@ -32,14 +28,6 @@ pub enum VersionStatus {
     Failed(Arc<Error>),
 }
 
-pub struct VersionUpdateEvent {
-    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<VersionUpdateEventArgs> + Send + Sync>>>>,
-}
-
-pub struct VersionUpdateEventAdapter {
-    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<VersionUpdateEventArgs> + Send + Sync>>>>,
-}
-
 pub struct VersionUpdateEventArgs {
     pub name: String,
     pub flavor: String,
@@ -48,7 +36,7 @@ pub struct VersionUpdateEventArgs {
 
 impl VersionService {
     pub fn new(client: ClientWithMiddleware, install_service: InstallService) -> Self {
-        let update_event = VersionUpdateEvent::new(install_service.clone());
+        let update_event = EventAdapter::new(install_service.update_event());
         Self {
             client,
             install_service,
@@ -56,7 +44,7 @@ impl VersionService {
         }
     }
 
-    pub fn update_event(&self) -> &VersionUpdateEvent {
+    pub fn update_event(&self) -> &EventAdapter<VersionUpdateEventArgs> {
         &self.update_event
     }
 
@@ -93,35 +81,6 @@ impl VersionService {
             .into_iter()
             .map(|install| ((install.version.clone(), install.flavor.clone()), install))
             .collect())
-    }
-}
-
-impl VersionUpdateEvent {
-    pub fn new(install_service: InstallService) -> Self {
-        let handlers = Arc::new(Mutex::new(Vec::new()));
-
-        install_service
-            .update_event()
-            .subscribe(VersionUpdateEventAdapter {
-                handlers: handlers.clone(),
-            });
-
-        Self { handlers }
-    }
-
-    pub fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<VersionUpdateEventArgs> + Send + Sync + 'static,
-    {
-        let mut handlers = self.handlers.lock().unwrap();
-        handlers.push(Arc::new(handler));
-    }
-}
-
-impl EventHandler<InstallUpdateEventArgs> for VersionUpdateEventAdapter {
-    fn invoke(&self, args: Arc<InstallUpdateEventArgs>) {
-        let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(Arc::new(VersionUpdateEventArgs::from(args)));
     }
 }
 

@@ -2,7 +2,7 @@ use std::{
     borrow::Borrow,
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use tokio::process::Command;
 
 use crate::{
     error::Error,
-    event::EventHandler,
+    event::{EventAdapter, EventDispatcher},
     services::{
         download::DownloadService,
         task::{Task, TaskService, TaskStatus, TaskUpdateEventArgs},
@@ -25,8 +25,8 @@ pub struct InstallService {
 pub struct InstallServiceInner {
     download_service: DownloadService,
     task_service: TaskService,
-    update_event: InstallUpdateEvent,
-    remove_event: InstallRemoveEvent,
+    update_event: EventAdapter<InstallUpdateEventArgs>,
+    remove_event: EventDispatcher<InstallRemoveEventArgs>,
     dir: PathBuf,
 }
 
@@ -52,7 +52,7 @@ pub struct Installation {
 }
 
 pub struct InstallationHandle {
-    remove_event: InstallRemoveEvent,
+    remove_event: EventDispatcher<InstallRemoveEventArgs>,
     id: String,
     dir: PathBuf,
     executable: PathBuf,
@@ -65,23 +65,11 @@ pub struct InstallationMetadata {
     pub executable: String,
 }
 
-pub struct InstallUpdateEvent {
-    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<InstallUpdateEventArgs> + Send + Sync>>>>,
-}
-
-pub struct InstallUpdateEventAdapter {
-    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<InstallUpdateEventArgs> + Send + Sync>>>>,
-}
-
 pub struct InstallUpdateEventArgs {
     pub id: String,
     pub version: String,
     pub flavor: String,
     pub status: InstallStatus,
-}
-
-pub struct InstallRemoveEvent {
-    handlers: Mutex<Vec<Arc<dyn EventHandler<InstallRemoveEventArgs> + Send + Sync>>>,
 }
 
 pub struct InstallRemoveEventArgs {
@@ -90,23 +78,23 @@ pub struct InstallRemoveEventArgs {
 
 impl InstallService {
     pub fn new(download_service: DownloadService, task_service: TaskService, dir: PathBuf) -> Self {
-        let update_event = InstallUpdateEvent::new(task_service.clone());
+        let update_event = EventAdapter::new(task_service.update_event());
         Self {
             inner: Arc::new(InstallServiceInner {
                 download_service,
                 task_service,
                 update_event,
-                remove_event: InstallRemoveEvent::new(),
+                remove_event: EventDispatcher::new(),
                 dir,
             }),
         }
     }
 
-    pub fn update_event(&self) -> &InstallUpdateEvent {
+    pub fn update_event(&self) -> &EventAdapter<InstallUpdateEventArgs> {
         &self.inner.update_event
     }
 
-    pub fn remove_event(&self) -> &InstallRemoveEvent {
+    pub fn remove_event(&self) -> &EventDispatcher<InstallRemoveEventArgs> {
         &self.inner.remove_event
     }
 
@@ -235,14 +223,14 @@ impl InstallService {
 impl InstallationHandle {
     pub fn new(id: &str, dir: &Path, executable: &str) -> Self {
         Self {
-            remove_event: InstallRemoveEvent::new(),
+            remove_event: EventDispatcher::new(),
             id: id.to_owned(),
             dir: dir.to_owned(),
             executable: dir.join(executable),
         }
     }
 
-    pub fn remove_event(&self) -> &InstallRemoveEvent {
+    pub fn remove_event(&self) -> &EventDispatcher<InstallRemoveEventArgs> {
         &self.remove_event
     }
 
@@ -281,56 +269,6 @@ impl InstallationMetadata {
         let bytes = tokio::fs::read(path).await?;
         let metadata = serde_json::from_slice::<InstallationMetadata>(&bytes)?;
         Ok(metadata)
-    }
-}
-
-impl InstallUpdateEvent {
-    pub fn new(task_service: TaskService) -> Self {
-        let handlers = Arc::new(Mutex::new(Vec::new()));
-
-        task_service
-            .update_event()
-            .subscribe(InstallUpdateEventAdapter {
-                handlers: handlers.clone(),
-            });
-
-        Self { handlers }
-    }
-
-    pub fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<InstallUpdateEventArgs> + Send + Sync + 'static,
-    {
-        let mut handlers = self.handlers.lock().unwrap();
-        handlers.push(Arc::new(handler));
-    }
-}
-
-impl EventHandler<TaskUpdateEventArgs> for InstallUpdateEventAdapter {
-    fn invoke(&self, args: Arc<TaskUpdateEventArgs>) {
-        let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(Arc::new(InstallUpdateEventArgs::from(args)));
-    }
-}
-
-impl InstallRemoveEvent {
-    pub fn new() -> Self {
-        Self {
-            handlers: Mutex::new(Vec::new()),
-        }
-    }
-
-    pub fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<InstallRemoveEventArgs> + Send + Sync + 'static,
-    {
-        let mut handlers = self.handlers.lock().unwrap();
-        handlers.push(Arc::new(handler));
-    }
-
-    pub fn invoke(&self, args: Arc<InstallRemoveEventArgs>) {
-        let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(args);
     }
 }
 
