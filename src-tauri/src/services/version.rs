@@ -4,6 +4,7 @@ use reqwest_middleware::ClientWithMiddleware;
 
 use crate::{
     error::Error,
+    event::EventHandler,
     services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 
@@ -92,13 +93,15 @@ impl VersionUpdateEvent {
         Self { install_service }
     }
 
-    pub fn subscribe<F>(&self, f: F)
+    pub fn subscribe<E>(&self, handler: E)
     where
-        F: Fn(VersionUpdateEventArgs) + Send + Sync + 'static,
+        E: EventHandler<VersionUpdateEventArgs> + Send + Sync + 'static,
     {
-        self.install_service.update_event().subscribe(move |args| {
-            f(args.into());
-        });
+        self.install_service
+            .update_event()
+            .subscribe(move |args: InstallUpdateEventArgs| {
+                handler.invoke(args.into());
+            });
     }
 }
 

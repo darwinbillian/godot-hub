@@ -1,4 +1,5 @@
 mod error;
+mod event;
 mod godot_website;
 mod ipc;
 mod services;

@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{error::Error, services::install::Installation};
+use crate::{error::Error, event::EventHandler, services::install::Installation};
 
 #[derive(Clone)]
 pub struct TaskService {
@@ -44,7 +44,7 @@ pub enum TaskStatus {
 }
 
 pub struct TaskUpdateEvent {
-    callback: Mutex<Vec<Arc<dyn Fn(TaskUpdateEventArgs) + Send + Sync>>>,
+    handlers: Mutex<Vec<Arc<dyn EventHandler<TaskUpdateEventArgs> + Send + Sync>>>,
 }
 
 #[derive(Clone)]
@@ -158,22 +158,22 @@ impl TaskHandle {
 impl TaskUpdateEvent {
     pub fn new() -> Self {
         Self {
-            callback: Mutex::new(Vec::new()),
+            handlers: Mutex::new(Vec::new()),
         }
     }
 
-    pub fn subscribe<F>(&self, f: F)
+    pub fn subscribe<E>(&self, handler: E)
     where
-        F: Fn(TaskUpdateEventArgs) + Send + Sync + 'static,
+        E: EventHandler<TaskUpdateEventArgs> + Send + Sync + 'static,
     {
-        let mut callback = self.callback.lock().unwrap();
-        callback.push(Arc::new(f))
+        let mut handlers = self.handlers.lock().unwrap();
+        handlers.push(Arc::new(handler))
     }
 
     pub fn invoke(&self, args: TaskUpdateEventArgs) {
-        let callback = self.callback.lock().unwrap().clone();
-        for f in callback {
-            f(args.clone())
+        let handlers = self.handlers.lock().unwrap().clone();
+        for handler in handlers {
+            handler.invoke(args.clone())
         }
     }
 }
