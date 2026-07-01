@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     collections::HashMap,
     sync::{Arc, Mutex},
 };
@@ -24,7 +25,6 @@ pub struct Version {
     pub status: VersionStatus,
 }
 
-#[derive(Clone)]
 pub enum VersionStatus {
     Available,
     Installing,
@@ -40,7 +40,6 @@ pub struct VersionUpdateEventAdapter {
     handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<VersionUpdateEventArgs> + Send + Sync>>>>,
 }
 
-#[derive(Clone)]
 pub struct VersionUpdateEventArgs {
     pub name: String,
     pub flavor: String,
@@ -70,7 +69,7 @@ impl VersionService {
             .map(|version| {
                 let key = (version.name.clone(), version.flavor.clone());
                 let status = if let Some(install) = installs.get(&key) {
-                    install.status.clone().into()
+                    VersionStatus::from(&install.status)
                 } else {
                     VersionStatus::Available
                 };
@@ -120,28 +119,35 @@ impl VersionUpdateEvent {
 }
 
 impl EventHandler<InstallUpdateEventArgs> for VersionUpdateEventAdapter {
-    fn invoke(&self, args: InstallUpdateEventArgs) {
+    fn invoke(&self, args: Arc<InstallUpdateEventArgs>) {
         let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(VersionUpdateEventArgs::from(args));
+        handlers.invoke(Arc::new(VersionUpdateEventArgs::from(args)));
     }
 }
 
-impl From<InstallStatus> for VersionStatus {
-    fn from(value: InstallStatus) -> Self {
-        match value {
-            InstallStatus::Installing => VersionStatus::Installing,
-            InstallStatus::Installed(_) => VersionStatus::Installed,
-            InstallStatus::Failed(e) => VersionStatus::Failed(e),
+impl<I> From<I> for VersionStatus
+where
+    I: Borrow<InstallStatus>,
+{
+    fn from(value: I) -> Self {
+        match value.borrow() {
+            InstallStatus::Installing => Self::Installing,
+            InstallStatus::Installed(_) => Self::Installed,
+            InstallStatus::Failed(e) => Self::Failed(e.clone()),
         }
     }
 }
 
-impl From<InstallUpdateEventArgs> for VersionUpdateEventArgs {
-    fn from(value: InstallUpdateEventArgs) -> Self {
+impl<I> From<I> for VersionUpdateEventArgs
+where
+    I: Borrow<InstallUpdateEventArgs>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
         Self {
-            name: value.version,
-            flavor: value.flavor,
-            status: value.status.into(),
+            name: value.version.clone(),
+            flavor: value.flavor.clone(),
+            status: VersionStatus::from(&value.status),
         }
     }
 }

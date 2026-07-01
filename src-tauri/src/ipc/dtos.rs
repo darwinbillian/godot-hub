@@ -78,8 +78,9 @@ where
     E: Borrow<Error>,
 {
     fn from(value: E) -> Self {
+        let value = value.borrow();
         Self {
-            message: value.borrow().to_string(),
+            message: value.to_string(),
         }
     }
 }
@@ -95,23 +96,33 @@ impl From<Version> for VersionDto {
     }
 }
 
-impl From<VersionStatus> for VersionStatusDto {
-    fn from(value: VersionStatus) -> Self {
+impl<V> From<V> for VersionStatusDto
+where
+    V: Borrow<VersionStatus>,
+{
+    fn from(value: V) -> Self {
+        let value = value.borrow();
         match value {
-            VersionStatus::Available => VersionStatusDto::Available,
-            VersionStatus::Installing => VersionStatusDto::Installing,
-            VersionStatus::Installed => VersionStatusDto::Installed,
-            VersionStatus::Failed(e) => VersionStatusDto::Failed { error: e.into() },
+            VersionStatus::Available => Self::Available,
+            VersionStatus::Installing => Self::Installing,
+            VersionStatus::Installed => Self::Installed,
+            VersionStatus::Failed(e) => Self::Failed {
+                error: e.as_ref().into(),
+            },
         }
     }
 }
 
-impl From<VersionUpdateEventArgs> for VersionUpdateEventArgsDto {
-    fn from(value: VersionUpdateEventArgs) -> Self {
+impl<V> From<V> for VersionUpdateEventArgsDto
+where
+    V: Borrow<VersionUpdateEventArgs>,
+{
+    fn from(value: V) -> Self {
+        let value = value.borrow();
         Self {
-            name: value.name,
-            flavor: value.flavor,
-            status: value.status.into(),
+            name: value.name.clone(),
+            flavor: value.flavor.clone(),
+            status: VersionStatusDto::from(&value.status),
         }
     }
 }
@@ -127,14 +138,20 @@ impl From<Install> for InstallDto {
     }
 }
 
-impl From<InstallStatus> for InstallStatusDto {
-    fn from(value: InstallStatus) -> Self {
+impl<I> From<I> for InstallStatusDto
+where
+    I: Borrow<InstallStatus>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
         match value {
-            InstallStatus::Installing => InstallStatusDto::Installing,
-            InstallStatus::Installed(installation) => InstallStatusDto::Installed {
-                installation: installation.into(),
+            InstallStatus::Installing => Self::Installing,
+            InstallStatus::Installed(installation) => Self::Installed {
+                installation: installation.as_ref().into(),
             },
-            InstallStatus::Failed(e) => InstallStatusDto::Failed { error: e.into() },
+            InstallStatus::Failed(e) => Self::Failed {
+                error: e.as_ref().into(),
+            },
         }
     }
 }
@@ -144,23 +161,34 @@ where
     I: Borrow<Installation>,
 {
     fn from(value: I) -> Self {
+        let value = value.borrow();
         Self {
-            dir: value.borrow().dir.to_string_lossy().into_owned(),
+            dir: value.dir.to_string_lossy().into_owned(),
         }
     }
 }
 
-impl From<InstallUpdateEventArgs> for InstallUpdateEventArgsDto {
-    fn from(value: InstallUpdateEventArgs) -> Self {
+impl<I> From<I> for InstallUpdateEventArgsDto
+where
+    I: Borrow<InstallUpdateEventArgs>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
         Self {
-            id: value.id,
-            status: value.status.into(),
+            id: value.id.clone(),
+            status: InstallStatusDto::from(&value.status),
         }
     }
 }
 
-impl From<InstallRemoveEventArgs> for InstallRemoveEventArgsDto {
-    fn from(value: InstallRemoveEventArgs) -> Self {
-        Self { id: value.id }
+impl<I> From<I> for InstallRemoveEventArgsDto
+where
+    I: Borrow<InstallRemoveEventArgs>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
+        Self {
+            id: value.id.clone(),
+        }
     }
 }
