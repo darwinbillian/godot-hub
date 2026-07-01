@@ -9,10 +9,10 @@ mod utils;
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::ClientBuilder;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 
 use crate::{
-    ipc::dtos::{InstallRemoveEventArgsDto, InstallUpdateEventArgsDto, VersionUpdateEventArgsDto},
+    ipc::emitter::{InstallRemoveEmitter, InstallUpdateEmitter, VersionUpdateEmitter},
     services::{
         download::DownloadService, install::InstallService, task::TaskService,
         version::VersionService,
@@ -51,28 +51,19 @@ pub fn run() {
                 local_data_dir.join("installs"),
             );
 
-            {
-                let handle = app.handle().clone();
-                install_service.update_event().subscribe(move |args| {
-                    let _ = handle.emit("update_install", &InstallUpdateEventArgsDto::from(args));
-                });
-            }
+            install_service
+                .update_event()
+                .subscribe(InstallUpdateEmitter::new(app.handle().clone()));
 
-            {
-                let handle = app.handle().clone();
-                install_service.remove_event().subscribe(move |args| {
-                    let _ = handle.emit("remove_install", &InstallRemoveEventArgsDto::from(args));
-                });
-            }
+            install_service
+                .remove_event()
+                .subscribe(InstallRemoveEmitter::new(app.handle().clone()));
 
             let version_service = VersionService::new(client.clone(), install_service.clone());
 
-            {
-                let handle = app.handle().clone();
-                version_service.update_event().subscribe(move |args| {
-                    let _ = handle.emit("update_version", &VersionUpdateEventArgsDto::from(args));
-                });
-            }
+            version_service
+                .update_event()
+                .subscribe(VersionUpdateEmitter::new(app.handle().clone()));
 
             let state = AppState {
                 install_service,
