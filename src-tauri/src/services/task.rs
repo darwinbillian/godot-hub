@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{error::Error, event::EventHandler, services::install::Installation};
+use crate::{error::Error, event::EventDispatcher, services::install::Installation};
 
 #[derive(Clone)]
 pub struct TaskService {
@@ -11,8 +11,8 @@ pub struct TaskService {
 }
 
 pub struct TaskServiceInner {
+    update_event: EventDispatcher<TaskUpdateEventArgs>,
     tasks: Mutex<HashMap<String, TaskHandle>>,
-    update_event: TaskUpdateEvent,
 }
 
 pub struct Task {
@@ -28,11 +28,11 @@ pub struct TaskHandle {
 }
 
 pub struct TaskHandleInner {
+    update_event: EventDispatcher<TaskUpdateEventArgs>,
     id: String,
     version: String,
     flavor: String,
     status: Mutex<TaskStatus>,
-    update_event: TaskUpdateEvent,
 }
 
 #[derive(Clone)]
@@ -41,10 +41,6 @@ pub enum TaskStatus {
     Running,
     Completed(Arc<Installation>),
     Failed(Arc<Error>),
-}
-
-pub struct TaskUpdateEvent {
-    handlers: Mutex<Vec<Arc<dyn EventHandler<TaskUpdateEventArgs> + Send + Sync>>>,
 }
 
 pub struct TaskUpdateEventArgs {
@@ -58,13 +54,13 @@ impl TaskService {
     pub fn new() -> Self {
         TaskService {
             inner: Arc::new(TaskServiceInner {
+                update_event: EventDispatcher::new(),
                 tasks: Mutex::new(HashMap::new()),
-                update_event: TaskUpdateEvent::new(),
             }),
         }
     }
 
-    pub fn update_event(&self) -> &TaskUpdateEvent {
+    pub fn update_event(&self) -> &EventDispatcher<TaskUpdateEventArgs> {
         &self.inner.update_event
     }
 
@@ -130,13 +126,17 @@ impl TaskHandle {
     pub fn from(task: Task) -> Self {
         Self {
             inner: Arc::new(TaskHandleInner {
+                update_event: EventDispatcher::new(),
                 id: task.id,
                 version: task.version,
                 flavor: task.flavor,
                 status: Mutex::new(task.status),
-                update_event: TaskUpdateEvent::new(),
             }),
         }
+    }
+
+    pub fn update_event(&self) -> &EventDispatcher<TaskUpdateEventArgs> {
+        &self.inner.update_event
     }
 
     pub fn set_status(&self, status: TaskStatus) {
@@ -147,31 +147,6 @@ impl TaskHandle {
 
         let args = TaskUpdateEventArgs::from(self);
         self.inner.update_event.invoke(Arc::new(args));
-    }
-
-    pub fn update_event(&self) -> &TaskUpdateEvent {
-        &self.inner.update_event
-    }
-}
-
-impl TaskUpdateEvent {
-    pub fn new() -> Self {
-        Self {
-            handlers: Mutex::new(Vec::new()),
-        }
-    }
-
-    pub fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<TaskUpdateEventArgs> + Send + Sync + 'static,
-    {
-        let mut handlers = self.handlers.lock().unwrap();
-        handlers.push(Arc::new(handler))
-    }
-
-    pub fn invoke(&self, args: Arc<TaskUpdateEventArgs>) {
-        let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(args);
     }
 }
 
