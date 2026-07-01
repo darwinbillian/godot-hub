@@ -65,9 +65,14 @@ pub struct InstallationMetadata {
 }
 
 pub struct InstallUpdateEvent {
-    task_service: TaskService,
+    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<InstallUpdateEventArgs> + Send + Sync>>>>,
 }
 
+pub struct InstallUpdateEventAdapter {
+    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<InstallUpdateEventArgs> + Send + Sync>>>>,
+}
+
+#[derive(Clone)]
 pub struct InstallUpdateEventArgs {
     pub id: String,
     pub version: String,
@@ -282,18 +287,30 @@ impl InstallationMetadata {
 
 impl InstallUpdateEvent {
     pub fn new(task_service: TaskService) -> Self {
-        Self { task_service }
+        let handlers = Arc::new(Mutex::new(Vec::new()));
+
+        task_service
+            .update_event()
+            .subscribe(InstallUpdateEventAdapter {
+                handlers: handlers.clone(),
+            });
+
+        Self { handlers }
     }
 
     pub fn subscribe<E>(&self, handler: E)
     where
         E: EventHandler<InstallUpdateEventArgs> + Send + Sync + 'static,
     {
-        self.task_service
-            .update_event()
-            .subscribe(move |args: TaskUpdateEventArgs| -> () {
-                handler.invoke(args.into());
-            });
+        let mut handlers = self.handlers.lock().unwrap();
+        handlers.push(Arc::new(handler));
+    }
+}
+
+impl EventHandler<TaskUpdateEventArgs> for InstallUpdateEventAdapter {
+    fn invoke(&self, args: TaskUpdateEventArgs) {
+        let handlers = self.handlers.lock().unwrap().clone();
+        handlers.invoke(InstallUpdateEventArgs::from(args));
     }
 }
 
