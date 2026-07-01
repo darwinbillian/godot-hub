@@ -24,7 +24,7 @@ pub struct InstallService {
 
 pub struct InstallServiceInner {
     download_service: DownloadService,
-    task_service: TaskService,
+    task_service: TaskService<Installation>,
     update_event: EventAdapter<InstallUpdateEventArgs>,
     remove_event: EventRepeater<InstallRemoveEventArgs>,
     dir: PathBuf,
@@ -77,7 +77,11 @@ pub struct InstallRemoveEventArgs {
 }
 
 impl InstallService {
-    pub fn new(download_service: DownloadService, task_service: TaskService, dir: PathBuf) -> Self {
+    pub fn new(
+        download_service: DownloadService,
+        task_service: TaskService<Installation>,
+        dir: PathBuf,
+    ) -> Self {
         let update_event = EventAdapter::new(task_service.update_event());
         Self {
             inner: Arc::new(InstallServiceInner {
@@ -269,7 +273,7 @@ impl InstallationMetadata {
 
 impl<T> From<T> for InstallStatus
 where
-    T: Borrow<TaskStatus>,
+    T: Borrow<TaskStatus<Installation>>,
 {
     fn from(value: T) -> Self {
         match value.borrow() {
@@ -282,7 +286,7 @@ where
 
 impl<T> From<T> for InstallUpdateEventArgs
 where
-    T: Borrow<TaskUpdateEventArgs>,
+    T: Borrow<TaskUpdateEventArgs<Installation>>,
 {
     fn from(value: T) -> Self {
         let value = value.borrow();

@@ -6,55 +6,51 @@ use std::{
 use crate::{
     error::Error,
     event::{EventDispatcher, EventRepeater},
-    services::install::Installation,
 };
 
-#[derive(Clone)]
-pub struct TaskService {
-    inner: Arc<TaskServiceInner>,
+pub struct TaskService<TResult> {
+    inner: Arc<TaskServiceInner<TResult>>,
 }
 
-pub struct TaskServiceInner {
-    update_event: EventRepeater<TaskUpdateEventArgs>,
-    tasks: Mutex<HashMap<String, TaskHandle>>,
+pub struct TaskServiceInner<TResult> {
+    update_event: EventRepeater<TaskUpdateEventArgs<TResult>>,
+    tasks: Mutex<HashMap<String, TaskHandle<TResult>>>,
 }
 
-pub struct Task {
+pub struct Task<TResult> {
     pub id: String,
     pub version: String,
     pub flavor: String,
-    pub status: TaskStatus,
+    pub status: TaskStatus<TResult>,
 }
 
-#[derive(Clone)]
-pub struct TaskHandle {
-    inner: Arc<TaskHandleInner>,
+pub struct TaskHandle<TResult> {
+    inner: Arc<TaskHandleInner<TResult>>,
 }
 
-pub struct TaskHandleInner {
-    update_event: EventDispatcher<TaskUpdateEventArgs>,
+pub struct TaskHandleInner<TResult> {
+    update_event: EventDispatcher<TaskUpdateEventArgs<TResult>>,
     id: String,
     version: String,
     flavor: String,
-    status: Mutex<TaskStatus>,
+    status: Mutex<TaskStatus<TResult>>,
 }
 
-#[derive(Clone)]
-pub enum TaskStatus {
+pub enum TaskStatus<TResult> {
     Pending,
     Running,
-    Completed(Arc<Installation>),
+    Completed(Arc<TResult>),
     Failed(Arc<Error>),
 }
 
-pub struct TaskUpdateEventArgs {
+pub struct TaskUpdateEventArgs<TResult> {
     pub id: String,
     pub version: String,
     pub flavor: String,
-    pub status: TaskStatus,
+    pub status: TaskStatus<TResult>,
 }
 
-impl TaskService {
+impl<TResult> TaskService<TResult> {
     pub fn new() -> Self {
         TaskService {
             inner: Arc::new(TaskServiceInner {
@@ -64,13 +60,14 @@ impl TaskService {
         }
     }
 
-    pub fn update_event(&self) -> &EventRepeater<TaskUpdateEventArgs> {
+    pub fn update_event(&self) -> &EventRepeater<TaskUpdateEventArgs<TResult>> {
         &self.inner.update_event
     }
 
-    pub async fn start<F>(&self, task: Task, f: F) -> Result<(), Error>
+    pub async fn start<F>(&self, task: Task<TResult>, f: F) -> Result<(), Error>
     where
-        F: AsyncFnOnce() -> Result<Installation, Error>,
+        TResult: Send + Sync + 'static,
+        F: AsyncFnOnce() -> Result<TResult, Error>,
     {
         let id = task.id.clone();
         let handle = TaskHandle::from(task);
@@ -84,26 +81,31 @@ impl TaskService {
 
         handle.set_status(TaskStatus::Running);
 
-        match f().await {
-            Ok(installation) => {
-                handle.set_status(TaskStatus::Completed(Arc::new(installation)));
-
-                let mut tasks = self.inner.tasks.lock().unwrap();
-                tasks.remove(&id);
+        let result = match f().await {
+            Ok(result) => result,
+            Err(e) => {
+                handle.set_status(TaskStatus::Failed(Arc::new(e)));
+                return Ok(());
             }
-            Err(e) => handle.set_status(TaskStatus::Failed(Arc::new(e))),
+        };
+
+        handle.set_status(TaskStatus::Completed(Arc::new(result)));
+
+        {
+            let mut tasks = self.inner.tasks.lock().unwrap();
+            tasks.remove(&id);
         }
 
         Ok(())
     }
 
-    pub fn list(&self) -> Vec<Task> {
+    pub fn list(&self) -> Vec<Task<TResult>> {
         let tasks = self.inner.tasks.lock().unwrap();
         tasks.values().map(Task::from).collect()
     }
 }
 
-impl Task {
+impl<TResult> Task<TResult> {
     pub fn new(id: &str, version: &str, flavor: &str) -> Self {
         Task {
             id: id.to_owned(),
@@ -113,7 +115,7 @@ impl Task {
         }
     }
 
-    pub fn from(task: &TaskHandle) -> Self {
+    pub fn from(task: &TaskHandle<TResult>) -> Self {
         Self {
             id: task.inner.id.clone(),
             version: task.inner.version.clone(),
@@ -123,8 +125,8 @@ impl Task {
     }
 }
 
-impl TaskHandle {
-    pub fn from(task: Task) -> Self {
+impl<TResult> TaskHandle<TResult> {
+    pub fn from(task: Task<TResult>) -> Self {
         Self {
             inner: Arc::new(TaskHandleInner {
                 update_event: EventDispatcher::new(),
@@ -136,11 +138,11 @@ impl TaskHandle {
         }
     }
 
-    pub fn update_event(&self) -> &EventDispatcher<TaskUpdateEventArgs> {
+    pub fn update_event(&self) -> &EventDispatcher<TaskUpdateEventArgs<TResult>> {
         &self.inner.update_event
     }
 
-    pub fn set_status(&self, status: TaskStatus) {
+    pub fn set_status(&self, status: TaskStatus<TResult>) {
         {
             let mut inner = self.inner.status.lock().unwrap();
             *inner = status;
@@ -151,13 +153,40 @@ impl TaskHandle {
     }
 }
 
-impl TaskUpdateEventArgs {
-    pub fn from(task: &TaskHandle) -> Self {
+impl<TResult> TaskUpdateEventArgs<TResult> {
+    pub fn from(task: &TaskHandle<TResult>) -> Self {
         Self {
             id: task.inner.id.clone(),
             version: task.inner.version.clone(),
             flavor: task.inner.flavor.clone(),
             status: task.inner.status.lock().unwrap().clone(),
+        }
+    }
+}
+
+impl<TResult> Clone for TaskService<TResult> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<TResult> Clone for TaskHandle<TResult> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<TResult> Clone for TaskStatus<TResult> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Pending => Self::Pending,
+            Self::Running => Self::Running,
+            Self::Completed(result) => Self::Completed(result.clone()),
+            Self::Failed(e) => Self::Failed(e.clone()),
         }
     }
 }
