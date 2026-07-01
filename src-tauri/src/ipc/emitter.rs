@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use tauri::{AppHandle, Emitter};
 
 use super::dtos::{

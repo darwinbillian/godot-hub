@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     collections::HashMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -72,7 +73,6 @@ pub struct InstallUpdateEventAdapter {
     handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<InstallUpdateEventArgs> + Send + Sync>>>>,
 }
 
-#[derive(Clone)]
 pub struct InstallUpdateEventArgs {
     pub id: String,
     pub version: String,
@@ -84,7 +84,6 @@ pub struct InstallRemoveEvent {
     handlers: Mutex<Vec<Arc<dyn EventHandler<InstallRemoveEventArgs> + Send + Sync>>>,
 }
 
-#[derive(Clone)]
 pub struct InstallRemoveEventArgs {
     pub id: String,
 }
@@ -258,7 +257,7 @@ impl InstallationHandle {
         let args = InstallRemoveEventArgs {
             id: self.id.clone(),
         };
-        self.remove_event.invoke(args);
+        self.remove_event.invoke(Arc::new(args));
 
         Ok(())
     }
@@ -308,9 +307,9 @@ impl InstallUpdateEvent {
 }
 
 impl EventHandler<TaskUpdateEventArgs> for InstallUpdateEventAdapter {
-    fn invoke(&self, args: TaskUpdateEventArgs) {
+    fn invoke(&self, args: Arc<TaskUpdateEventArgs>) {
         let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(InstallUpdateEventArgs::from(args));
+        handlers.invoke(Arc::new(InstallUpdateEventArgs::from(args)));
     }
 }
 
@@ -329,29 +328,36 @@ impl InstallRemoveEvent {
         handlers.push(Arc::new(handler));
     }
 
-    pub fn invoke(&self, args: InstallRemoveEventArgs) {
+    pub fn invoke(&self, args: Arc<InstallRemoveEventArgs>) {
         let handlers = self.handlers.lock().unwrap().clone();
         handlers.invoke(args);
     }
 }
 
-impl From<TaskStatus> for InstallStatus {
-    fn from(value: TaskStatus) -> Self {
-        match value {
-            TaskStatus::Completed(installation) => InstallStatus::Installed(installation),
-            TaskStatus::Failed(e) => InstallStatus::Failed(e),
-            _ => InstallStatus::Installing,
+impl<T> From<T> for InstallStatus
+where
+    T: Borrow<TaskStatus>,
+{
+    fn from(value: T) -> Self {
+        match value.borrow() {
+            TaskStatus::Completed(installation) => Self::Installed(installation.clone()),
+            TaskStatus::Failed(e) => Self::Failed(e.clone()),
+            _ => Self::Installing,
         }
     }
 }
 
-impl From<TaskUpdateEventArgs> for InstallUpdateEventArgs {
-    fn from(value: TaskUpdateEventArgs) -> Self {
+impl<T> From<T> for InstallUpdateEventArgs
+where
+    T: Borrow<TaskUpdateEventArgs>,
+{
+    fn from(value: T) -> Self {
+        let value = value.borrow();
         Self {
-            id: value.id,
-            version: value.version,
-            flavor: value.flavor,
-            status: value.status.into(),
+            id: value.id.clone(),
+            version: value.version.clone(),
+            flavor: value.flavor.clone(),
+            status: InstallStatus::from(&value.status),
         }
     }
 }

@@ -47,7 +47,6 @@ pub struct TaskUpdateEvent {
     handlers: Mutex<Vec<Arc<dyn EventHandler<TaskUpdateEventArgs> + Send + Sync>>>,
 }
 
-#[derive(Clone)]
 pub struct TaskUpdateEventArgs {
     pub id: String,
     pub version: String,
@@ -147,7 +146,7 @@ impl TaskHandle {
         }
 
         let args = TaskUpdateEventArgs::from(self);
-        self.inner.update_event.invoke(args);
+        self.inner.update_event.invoke(Arc::new(args));
     }
 
     pub fn update_event(&self) -> &TaskUpdateEvent {
@@ -170,7 +169,7 @@ impl TaskUpdateEvent {
         handlers.push(Arc::new(handler))
     }
 
-    pub fn invoke(&self, args: TaskUpdateEventArgs) {
+    pub fn invoke(&self, args: Arc<TaskUpdateEventArgs>) {
         let handlers = self.handlers.lock().unwrap().clone();
         handlers.invoke(args);
     }
