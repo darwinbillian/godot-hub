@@ -9,6 +9,7 @@ use tokio::process::Command;
 
 use crate::{
     error::Error,
+    event::EventHandler,
     services::{
         download::DownloadService,
         task::{Task, TaskService, TaskStatus, TaskUpdateEventArgs},
@@ -75,7 +76,7 @@ pub struct InstallUpdateEventArgs {
 }
 
 pub struct InstallRemoveEvent {
-    callback: Mutex<Vec<Arc<dyn Fn(InstallRemoveEventArgs) + Send + Sync>>>,
+    handlers: Mutex<Vec<Arc<dyn EventHandler<InstallRemoveEventArgs> + Send + Sync>>>,
 }
 
 #[derive(Clone)]
@@ -284,35 +285,37 @@ impl InstallUpdateEvent {
         Self { task_service }
     }
 
-    pub fn subscribe<F>(&self, f: F)
+    pub fn subscribe<E>(&self, handler: E)
     where
-        F: Fn(InstallUpdateEventArgs) + Send + Sync + 'static,
+        E: EventHandler<InstallUpdateEventArgs> + Send + Sync + 'static,
     {
-        self.task_service.update_event().subscribe(move |args| {
-            f(args.into());
-        });
+        self.task_service
+            .update_event()
+            .subscribe(move |args: TaskUpdateEventArgs| -> () {
+                handler.invoke(args.into());
+            });
     }
 }
 
 impl InstallRemoveEvent {
     pub fn new() -> Self {
         Self {
-            callback: Mutex::new(Vec::new()),
+            handlers: Mutex::new(Vec::new()),
         }
     }
 
-    pub fn subscribe<F>(&self, f: F)
+    pub fn subscribe<E>(&self, handler: E)
     where
-        F: Fn(InstallRemoveEventArgs) + Send + Sync + 'static,
+        E: EventHandler<InstallRemoveEventArgs> + Send + Sync + 'static,
     {
-        let mut callback = self.callback.lock().unwrap();
-        callback.push(Arc::new(f));
+        let mut handlers = self.handlers.lock().unwrap();
+        handlers.push(Arc::new(handler));
     }
 
     pub fn invoke(&self, args: InstallRemoveEventArgs) {
-        let callback = self.callback.lock().unwrap().clone();
-        for f in callback {
-            f(args.clone());
+        let handlers = self.handlers.lock().unwrap().clone();
+        for handler in handlers {
+            handler.invoke(args.clone());
         }
     }
 }
