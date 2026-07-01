@@ -314,9 +314,7 @@ impl InstallRemoveEvent {
 
     pub fn invoke(&self, args: InstallRemoveEventArgs) {
         let handlers = self.handlers.lock().unwrap().clone();
-        for handler in handlers {
-            handler.invoke(args.clone());
-        }
+        handlers.invoke(args);
     }
 }
 

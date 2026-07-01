@@ -172,9 +172,7 @@ impl TaskUpdateEvent {
 
     pub fn invoke(&self, args: TaskUpdateEventArgs) {
         let handlers = self.handlers.lock().unwrap().clone();
-        for handler in handlers {
-            handler.invoke(args.clone())
-        }
+        handlers.invoke(args);
     }
 }
 
