@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use reqwest_middleware::ClientWithMiddleware;
 
@@ -21,6 +24,7 @@ pub struct Version {
     pub status: VersionStatus,
 }
 
+#[derive(Clone)]
 pub enum VersionStatus {
     Available,
     Installing,
@@ -29,9 +33,14 @@ pub enum VersionStatus {
 }
 
 pub struct VersionUpdateEvent {
-    install_service: InstallService,
+    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<VersionUpdateEventArgs> + Send + Sync>>>>,
 }
 
+pub struct VersionUpdateEventAdapter {
+    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<VersionUpdateEventArgs> + Send + Sync>>>>,
+}
+
+#[derive(Clone)]
 pub struct VersionUpdateEventArgs {
     pub name: String,
     pub flavor: String,
@@ -90,18 +99,30 @@ impl VersionService {
 
 impl VersionUpdateEvent {
     pub fn new(install_service: InstallService) -> Self {
-        Self { install_service }
+        let handlers = Arc::new(Mutex::new(Vec::new()));
+
+        install_service
+            .update_event()
+            .subscribe(VersionUpdateEventAdapter {
+                handlers: handlers.clone(),
+            });
+
+        Self { handlers }
     }
 
     pub fn subscribe<E>(&self, handler: E)
     where
         E: EventHandler<VersionUpdateEventArgs> + Send + Sync + 'static,
     {
-        self.install_service
-            .update_event()
-            .subscribe(move |args: InstallUpdateEventArgs| {
-                handler.invoke(args.into());
-            });
+        let mut handlers = self.handlers.lock().unwrap();
+        handlers.push(Arc::new(handler));
+    }
+}
+
+impl EventHandler<InstallUpdateEventArgs> for VersionUpdateEventAdapter {
+    fn invoke(&self, args: InstallUpdateEventArgs) {
+        let handlers = self.handlers.lock().unwrap().clone();
+        handlers.invoke(VersionUpdateEventArgs::from(args));
     }
 }
 
