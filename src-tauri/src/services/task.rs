@@ -3,7 +3,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{error::Error, event::EventDispatcher, services::install::Installation};
+use crate::{
+    error::Error,
+    event::{EventDispatcher, EventRepeater},
+    services::install::Installation,
+};
 
 #[derive(Clone)]
 pub struct TaskService {
@@ -11,7 +15,7 @@ pub struct TaskService {
 }
 
 pub struct TaskServiceInner {
-    update_event: EventDispatcher<TaskUpdateEventArgs>,
+    update_event: EventRepeater<TaskUpdateEventArgs>,
     tasks: Mutex<HashMap<String, TaskHandle>>,
 }
 
@@ -54,13 +58,13 @@ impl TaskService {
     pub fn new() -> Self {
         TaskService {
             inner: Arc::new(TaskServiceInner {
-                update_event: EventDispatcher::new(),
+                update_event: EventRepeater::new(),
                 tasks: Mutex::new(HashMap::new()),
             }),
         }
     }
 
-    pub fn update_event(&self) -> &EventDispatcher<TaskUpdateEventArgs> {
+    pub fn update_event(&self) -> &EventRepeater<TaskUpdateEventArgs> {
         &self.inner.update_event
     }
 
@@ -70,11 +74,8 @@ impl TaskService {
     {
         let id = task.id.clone();
         let handle = TaskHandle::from(task);
-        let inner = self.inner.clone();
 
-        handle.update_event().subscribe(move |args| {
-            inner.update_event.invoke(args);
-        });
+        self.inner.update_event.repeat(handle.update_event());
 
         {
             let mut tasks = self.inner.tasks.lock().unwrap();
