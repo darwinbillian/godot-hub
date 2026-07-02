@@ -1,9 +1,14 @@
-import { launch, listInstalls, reveal, uninstall } from "@/lib/ipc/commands";
+import {
+  launch,
+  listInstalls,
+  reveal,
+  uninstall,
+} from "@/lib/ipc/features/install/commands";
 import {
   Install,
   InstallRemoveEventArgs,
   InstallUpdateEventArgs,
-} from "@/lib/ipc/types";
+} from "@/lib/ipc/features/install/types";
 import { listen } from "@tauri-apps/api/event";
 import {
   ChevronDownIcon,

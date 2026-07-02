@@ -12,7 +12,10 @@ use reqwest_middleware::ClientBuilder;
 use tauri::Manager;
 
 use crate::{
-    ipc::emitter::{InstallRemoveEmitter, InstallUpdateEmitter, VersionUpdateEmitter},
+    ipc::features::{
+        install::emitter::{InstallRemoveEmitter, InstallUpdateEmitter},
+        version::emitter::VersionUpdateEmitter,
+    },
     services::{
         download::DownloadService, install::InstallService, task::TaskService,
         version::VersionService,
@@ -75,12 +78,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             ipc::commands::show,
-            ipc::commands::list_versions,
-            ipc::commands::install,
-            ipc::commands::list_installs,
-            ipc::commands::launch,
-            ipc::commands::uninstall,
-            ipc::commands::reveal
+            ipc::features::install::commands::install,
+            ipc::features::install::commands::list_installs,
+            ipc::features::install::commands::launch,
+            ipc::features::install::commands::uninstall,
+            ipc::features::install::commands::reveal,
+            ipc::features::version::commands::list_versions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
