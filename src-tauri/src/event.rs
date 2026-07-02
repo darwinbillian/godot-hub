@@ -22,6 +22,14 @@ pub struct EventAdapterInner<T> {
     handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
 }
 
+pub struct EventRepeater<T> {
+    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
+}
+
+pub struct EventRepeaterInner<T> {
+    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
+}
+
 impl<T> EventDispatcher<T> {
     pub fn new() -> Self {
         Self {
@@ -67,6 +75,32 @@ impl<T> EventAdapter<T> {
     }
 }
 
+impl<T> EventRepeater<T> {
+    pub fn new() -> Self {
+        Self {
+            handlers: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    pub fn subscribe<E>(&self, handler: E)
+    where
+        E: EventHandler<T> + Send + Sync + 'static,
+    {
+        let mut handlers = self.handlers.lock().unwrap();
+        handlers.push(Arc::new(handler));
+    }
+
+    pub fn repeat<E>(&self, event: &E)
+    where
+        T: 'static,
+        E: Event<T>,
+    {
+        event.subscribe(EventRepeaterInner {
+            handlers: self.handlers.clone(),
+        });
+    }
+}
+
 impl<T> Event<T> for EventDispatcher<T> {
     fn subscribe<E>(&self, handler: E)
     where
@@ -92,6 +126,22 @@ where
     fn invoke(&self, args: Arc<T>) {
         let handlers = self.handlers.lock().unwrap().clone();
         handlers.invoke(Arc::new(U::from(args)));
+    }
+}
+
+impl<T> Event<T> for EventRepeater<T> {
+    fn subscribe<E>(&self, handler: E)
+    where
+        E: EventHandler<T> + Send + Sync + 'static,
+    {
+        self.subscribe(handler);
+    }
+}
+
+impl<T> EventHandler<T> for EventRepeaterInner<T> {
+    fn invoke(&self, args: Arc<T>) {
+        let handlers = self.handlers.lock().unwrap().clone();
+        handlers.invoke(args);
     }
 }
 

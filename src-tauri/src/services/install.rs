@@ -10,7 +10,7 @@ use tokio::process::Command;
 
 use crate::{
     error::Error,
-    event::{EventAdapter, EventDispatcher},
+    event::{EventAdapter, EventDispatcher, EventRepeater},
     services::{
         download::DownloadService,
         task::{Task, TaskService, TaskStatus, TaskUpdateEventArgs},
@@ -26,7 +26,7 @@ pub struct InstallServiceInner {
     download_service: DownloadService,
     task_service: TaskService,
     update_event: EventAdapter<InstallUpdateEventArgs>,
-    remove_event: EventDispatcher<InstallRemoveEventArgs>,
+    remove_event: EventRepeater<InstallRemoveEventArgs>,
     dir: PathBuf,
 }
 
@@ -84,7 +84,7 @@ impl InstallService {
                 download_service,
                 task_service,
                 update_event,
-                remove_event: EventDispatcher::new(),
+                remove_event: EventRepeater::new(),
                 dir,
             }),
         }
@@ -94,7 +94,7 @@ impl InstallService {
         &self.inner.update_event
     }
 
-    pub fn remove_event(&self) -> &EventDispatcher<InstallRemoveEventArgs> {
+    pub fn remove_event(&self) -> &EventRepeater<InstallRemoveEventArgs> {
         &self.inner.remove_event
     }
 
@@ -166,12 +166,7 @@ impl InstallService {
         let dir = self.inner.dir.join(id);
         let metadata = InstallationMetadata::load(&dir).await?;
         let install = InstallationHandle::new(id, &dir, &metadata.executable);
-
-        let inner = self.inner.clone();
-        install.remove_event().subscribe(move |args| {
-            inner.remove_event.invoke(args);
-        });
-
+        self.inner.remove_event.repeat(install.remove_event());
         Ok(install)
     }
 
