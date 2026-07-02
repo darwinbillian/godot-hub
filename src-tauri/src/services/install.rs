@@ -24,10 +24,16 @@ pub struct InstallService {
 
 pub struct InstallServiceInner {
     download_service: DownloadService,
-    task_service: TaskService<Installation>,
+    task_service: TaskService<InstallState, Installation>,
     update_event: EventAdapter<InstallUpdateEventArgs>,
     remove_event: EventRepeater<InstallRemoveEventArgs>,
     dir: PathBuf,
+}
+
+pub struct InstallState {
+    pub id: String,
+    pub version: String,
+    pub flavor: String,
 }
 
 pub struct Install {
@@ -79,7 +85,7 @@ pub struct InstallRemoveEventArgs {
 impl InstallService {
     pub fn new(
         download_service: DownloadService,
-        task_service: TaskService<Installation>,
+        task_service: TaskService<InstallState, Installation>,
         dir: PathBuf,
     ) -> Self {
         let update_event = EventAdapter::new(task_service.update_event());
@@ -104,7 +110,12 @@ impl InstallService {
 
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
         let id = format!("{}-{}", version, flavor);
-        let task = Task::new(&id, version, flavor);
+        let state = InstallState {
+            id: id.clone(),
+            version: version.to_owned(),
+            flavor: flavor.to_owned(),
+        };
+        let task = Task::new(&id, state);
 
         self.inner
             .task_service
@@ -142,22 +153,12 @@ impl InstallService {
         let tasks = self.inner.task_service.list();
 
         for task in tasks {
-            let install = Install {
-                id: task.id,
-                flavor: task.flavor,
-                version: task.version,
-                status: task.status.into(),
-            };
+            let install = Install::from(task);
             installs.insert(install.id.clone(), install);
         }
 
         for installation in installations {
-            let install = Install {
-                id: installation.id.clone(),
-                version: installation.version.clone(),
-                flavor: installation.flavor.clone(),
-                status: InstallStatus::Installed(Arc::new(installation)),
-            };
+            let install = Install::from(installation);
             installs.insert(install.id.clone(), install);
         }
 
@@ -271,6 +272,28 @@ impl InstallationMetadata {
     }
 }
 
+impl From<Installation> for Install {
+    fn from(value: Installation) -> Self {
+        Self {
+            id: value.id.clone(),
+            version: value.version.clone(),
+            flavor: value.flavor.clone(),
+            status: InstallStatus::Installed(Arc::new(value)),
+        }
+    }
+}
+
+impl From<Task<InstallState, Installation>> for Install {
+    fn from(value: Task<InstallState, Installation>) -> Self {
+        Install {
+            id: value.state.id.clone(),
+            flavor: value.state.flavor.clone(),
+            version: value.state.version.clone(),
+            status: value.status.into(),
+        }
+    }
+}
+
 impl<T> From<T> for InstallStatus
 where
     T: Borrow<TaskStatus<Installation>>,
@@ -286,14 +309,14 @@ where
 
 impl<T> From<T> for InstallUpdateEventArgs
 where
-    T: Borrow<TaskUpdateEventArgs<Installation>>,
+    T: Borrow<TaskUpdateEventArgs<InstallState, Installation>>,
 {
     fn from(value: T) -> Self {
         let value = value.borrow();
         Self {
-            id: value.id.clone(),
-            version: value.version.clone(),
-            flavor: value.flavor.clone(),
+            id: value.state.id.clone(),
+            version: value.state.version.clone(),
+            flavor: value.state.flavor.clone(),
             status: InstallStatus::from(&value.status),
         }
     }
