@@ -1,5 +1,9 @@
-import { install, listVersions } from "@/lib/ipc/commands";
-import { Version, VersionUpdateEventArgs } from "@/lib/ipc/types";
+import { install } from "@/lib/ipc/features/install/commands";
+import { listVersions } from "@/lib/ipc/features/version/commands";
+import {
+  Version,
+  VersionUpdateEventArgs,
+} from "@/lib/ipc/features/version/types";
 import { listen } from "@tauri-apps/api/event";
 import {
   ArrowLeftIcon,

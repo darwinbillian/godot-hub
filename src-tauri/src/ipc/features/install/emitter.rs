@@ -2,20 +2,11 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter};
 
-use super::dtos::{
-    InstallRemoveEventArgsDto, InstallUpdateEventArgsDto, VersionUpdateEventArgsDto,
-};
+use super::dtos::{InstallRemoveEventArgsDto, InstallUpdateEventArgsDto};
 use crate::{
     event::EventHandler,
-    services::{
-        install::{InstallRemoveEventArgs, InstallUpdateEventArgs},
-        version::VersionUpdateEventArgs,
-    },
+    services::install::{InstallRemoveEventArgs, InstallUpdateEventArgs},
 };
-
-pub struct VersionUpdateEmitter {
-    app: AppHandle,
-}
 
 pub struct InstallUpdateEmitter {
     app: AppHandle,
@@ -23,12 +14,6 @@ pub struct InstallUpdateEmitter {
 
 pub struct InstallRemoveEmitter {
     app: AppHandle,
-}
-
-impl VersionUpdateEmitter {
-    pub fn new(app: AppHandle) -> Self {
-        Self { app }
-    }
 }
 
 impl InstallUpdateEmitter {
@@ -40,14 +25,6 @@ impl InstallUpdateEmitter {
 impl InstallRemoveEmitter {
     pub fn new(app: AppHandle) -> Self {
         Self { app }
-    }
-}
-
-impl EventHandler<VersionUpdateEventArgs> for VersionUpdateEmitter {
-    fn invoke(&self, args: Arc<VersionUpdateEventArgs>) {
-        let _ = self
-            .app
-            .emit("update_version", &VersionUpdateEventArgsDto::from(args));
     }
 }
 
