@@ -14,7 +14,9 @@ use reqwest_middleware::ClientBuilder;
 use tauri::Manager;
 
 use crate::{
-    godot_website::{GodotWebsiteClient, GodotWebsiteVersionProvider},
+    godot_website::{
+        GodotWebsiteClient, GodotWebsiteDownloadProvider, GodotWebsiteVersionProvider,
+    },
     ipc::features::{
         install::emitter::{InstallRemoveEmitter, InstallUpdateEmitter},
         version::emitter::VersionUpdateEmitter,
@@ -50,12 +52,15 @@ pub fn run() {
 
             let version_provider = Arc::new(GodotWebsiteVersionProvider::new(godot_website));
 
+            let download_provider = Arc::new(GodotWebsiteDownloadProvider::new());
+
             let download_service =
                 DownloadService::new(client.clone(), local_data_dir.join("downloads"));
 
             let task_service = TaskService::new();
 
             let install_service = InstallService::new(
+                download_provider,
                 download_service,
                 task_service.clone(),
                 local_data_dir.join("installs"),

@@ -17,12 +17,17 @@ use crate::{
     },
 };
 
+pub trait DownloadProvider {
+    fn get_download_url(&self, version: &str, flavor: &str, slug: &str, platform: &str) -> String;
+}
+
 #[derive(Clone)]
 pub struct InstallService {
     inner: Arc<InstallServiceInner>,
 }
 
 pub struct InstallServiceInner {
+    download_provider: Arc<dyn DownloadProvider + Send + Sync>,
     download_service: DownloadService,
     task_service: TaskService<InstallState, Installation>,
     update_event: EventAdapter<InstallUpdateEventArgs>,
@@ -84,6 +89,7 @@ pub struct InstallRemoveEventArgs {
 
 impl InstallService {
     pub fn new(
+        download_provider: Arc<dyn DownloadProvider + Send + Sync>,
         download_service: DownloadService,
         task_service: TaskService<InstallState, Installation>,
         dir: PathBuf,
@@ -91,6 +97,7 @@ impl InstallService {
         let update_event = EventAdapter::new(task_service.update_event());
         Self {
             inner: Arc::new(InstallServiceInner {
+                download_provider,
                 download_service,
                 task_service,
                 update_event,
@@ -176,7 +183,12 @@ impl InstallService {
     }
 
     async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
-        let url = format!("https://downloads.godotengine.org/?version={}&flavor={}&slug=win64.exe.zip&platform=windows.64", version, flavor);
+        let url = self.inner.download_provider.get_download_url(
+            version,
+            flavor,
+            "win64.exe.zip",
+            "windows.64",
+        );
         let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
         let path = self.inner.download_service.download(&url, &name).await?;
         Ok(path)
