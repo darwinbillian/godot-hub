@@ -10,7 +10,7 @@ use tokio::process::Command;
 
 use crate::{
     application::services::{
-        download::DownloadService,
+        download::{Download, DownloadService},
         task::{Task, TaskService, TaskStatus, TaskUpdateEventArgs},
     },
     error::Error,
@@ -202,7 +202,8 @@ impl InstallService {
             "windows.64",
         );
         let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
-        let path = self.inner.download_service.download(&url, &name).await?;
+        let download = Download::new(&url, &name);
+        let path = self.inner.download_service.download(download).await?;
         Ok(path)
     }
 
