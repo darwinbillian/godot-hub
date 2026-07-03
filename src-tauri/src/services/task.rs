@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     collections::HashMap,
     sync::{Arc, Mutex},
 };
@@ -67,7 +68,7 @@ impl<TState, TResult> TaskService<TState, TResult> {
         F: AsyncFnOnce() -> Result<TResult, Error>,
     {
         let id = task.id.clone();
-        let handle = TaskHandle::from(task);
+        let handle = task.into_handle();
 
         self.inner.update_event.repeat(handle.update_event());
 
@@ -111,27 +112,19 @@ impl<TState, TResult> Task<TState, TResult> {
         }
     }
 
-    pub fn from(task: &TaskHandle<TState, TResult>) -> Self {
-        Self {
-            id: task.inner.id.clone(),
-            state: task.inner.state.clone(),
-            status: task.inner.status.lock().unwrap().clone(),
+    pub fn into_handle(self) -> TaskHandle<TState, TResult> {
+        TaskHandle {
+            inner: Arc::new(TaskHandleInner {
+                update_event: EventDispatcher::new(),
+                id: self.id,
+                state: self.state,
+                status: Mutex::new(self.status),
+            }),
         }
     }
 }
 
 impl<TState, TResult> TaskHandle<TState, TResult> {
-    pub fn from(task: Task<TState, TResult>) -> Self {
-        Self {
-            inner: Arc::new(TaskHandleInner {
-                update_event: EventDispatcher::new(),
-                id: task.id,
-                state: task.state,
-                status: Mutex::new(task.status),
-            }),
-        }
-    }
-
     pub fn update_event(&self) -> &EventDispatcher<TaskUpdateEventArgs<TState, TResult>> {
         &self.inner.update_event
     }
@@ -142,16 +135,30 @@ impl<TState, TResult> TaskHandle<TState, TResult> {
             *inner = status;
         }
 
-        let args = TaskUpdateEventArgs::from(self);
+        let args = TaskUpdateEventArgs::from(Task::from(self));
         self.inner.update_event.invoke(Arc::new(args));
     }
 }
 
-impl<TState, TResult> TaskUpdateEventArgs<TState, TResult> {
-    pub fn from(task: &TaskHandle<TState, TResult>) -> Self {
+impl<TState, TStatus, T> From<T> for Task<TState, TStatus>
+where
+    T: Borrow<TaskHandle<TState, TStatus>>,
+{
+    fn from(value: T) -> Self {
+        let value = value.borrow();
         Self {
-            state: task.inner.state.clone(),
-            status: task.inner.status.lock().unwrap().clone(),
+            id: value.inner.id.clone(),
+            state: value.inner.state.clone(),
+            status: value.inner.status.lock().unwrap().clone(),
+        }
+    }
+}
+
+impl<TState, TResult> From<Task<TState, TResult>> for TaskUpdateEventArgs<TState, TResult> {
+    fn from(value: Task<TState, TResult>) -> Self {
+        Self {
+            state: value.state,
+            status: value.status,
         }
     }
 }
