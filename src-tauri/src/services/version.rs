@@ -1,15 +1,14 @@
 use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
-use reqwest_middleware::ClientWithMiddleware;
-
 use crate::{
     error::Error,
     event::EventAdapter,
+    godot_website::GodotWebsiteClient,
     services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 
 pub struct VersionService {
-    client: ClientWithMiddleware,
+    godot_website: GodotWebsiteClient,
     install_service: InstallService,
     update_event: EventAdapter<VersionUpdateEventArgs>,
 }
@@ -35,10 +34,10 @@ pub struct VersionUpdateEventArgs {
 }
 
 impl VersionService {
-    pub fn new(client: ClientWithMiddleware, install_service: InstallService) -> Self {
+    pub fn new(godot_website: GodotWebsiteClient, install_service: InstallService) -> Self {
         let update_event = EventAdapter::new(install_service.update_event());
         Self {
-            client,
+            godot_website,
             install_service,
             update_event,
         }
@@ -49,7 +48,7 @@ impl VersionService {
     }
 
     pub async fn list(&self) -> Result<Vec<Version>, Error> {
-        let versions = crate::godot_website::get_versions(&self.client).await?;
+        let versions = self.godot_website.list_versions().await?;
         let installs = self.list_installs().await?;
         Ok(versions
             .into_iter()
