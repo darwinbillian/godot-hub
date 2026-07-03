@@ -13,7 +13,7 @@ import {
 import { memo, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
-export default function NewInstallPage() {
+export default function InstallsInstallPage() {
   const [versions, setVersions] = useState<Version[]>();
 
   useEffect(() => {

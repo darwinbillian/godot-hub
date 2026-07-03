@@ -1,7 +1,7 @@
 import RootLayout from "@/layouts/RootLayout";
 import { show } from "@/lib/ipc/commands";
-import InstallListPage from "@/pages/installs/InstallListPage";
-import NewInstallPage from "@/pages/installs/NewInstallPage";
+import InstallsInstallPage from "@/pages/installs/InstallsInstallPage";
+import InstallsListPage from "@/pages/installs/InstallsListPage";
 import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import "./App.css";
@@ -16,8 +16,8 @@ export default function App() {
       <Route element={<RootLayout />}>
         <Route index element={<Navigate to="/installs" />} />
         <Route path="installs">
-          <Route index element={<InstallListPage />} />
-          <Route path="new" element={<NewInstallPage />} />
+          <Route index element={<InstallsListPage />} />
+          <Route path="install" element={<InstallsInstallPage />} />
         </Route>
       </Route>
     </Routes>

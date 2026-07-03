@@ -19,7 +19,7 @@ import {
 import { memo, useEffect, useState } from "react";
 import { Link } from "react-router";
 
-export default function InstallListPage() {
+export default function InstallsListPage() {
   const [installs, setInstalls] = useState<Install[]>();
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function InstallListPage() {
           <h1 className="text-2xl font-semibold">Installs</h1>
         </div>
         <div>
-          <Link className="btn btn-primary" to="/installs/new">
+          <Link className="btn btn-primary" to="/installs/install">
             Install Editor
           </Link>
         </div>
