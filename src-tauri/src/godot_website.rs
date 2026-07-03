@@ -1,7 +1,10 @@
 use reqwest_middleware::ClientWithMiddleware;
 use serde::Deserialize;
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    services::version::{RemoteVersion, VersionProvider},
+};
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
@@ -27,6 +30,10 @@ pub struct GodotWebsiteClient {
     client: ClientWithMiddleware,
 }
 
+pub struct GodotWebsiteVersionProvider {
+    client: GodotWebsiteClient,
+}
+
 impl GodotWebsiteClient {
     pub fn new(client: ClientWithMiddleware) -> Self {
         Self { client }
@@ -40,5 +47,30 @@ impl GodotWebsiteClient {
         let bytes = response.bytes().await?;
         let versions = yaml_serde::from_slice::<Vec<VersionDto>>(&bytes)?;
         Ok(versions)
+    }
+}
+
+impl GodotWebsiteVersionProvider {
+    pub fn new(client: GodotWebsiteClient) -> Self {
+        Self { client }
+    }
+}
+
+#[async_trait::async_trait]
+impl VersionProvider for GodotWebsiteVersionProvider {
+    async fn list_versions(&self) -> Result<Vec<RemoteVersion>, Error> {
+        let versions = self.client.list_versions().await?;
+        Ok(versions
+            .into_iter()
+            .filter(|version| version.flavor == "stable")
+            .map(|version| RemoteVersion {
+                name: version.name,
+                flavor: version.flavor,
+                release_notes: format!(
+                    "https://godotengine.org/{}",
+                    version.release_notes.trim_start_matches("/")
+                ),
+            })
+            .collect())
     }
 }

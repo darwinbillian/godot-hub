@@ -3,12 +3,16 @@ use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 use crate::{
     error::Error,
     event::EventAdapter,
-    godot_website::GodotWebsiteClient,
     services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 
+#[async_trait::async_trait]
+pub trait VersionProvider {
+    async fn list_versions(&self) -> Result<Vec<RemoteVersion>, Error>;
+}
+
 pub struct VersionService {
-    godot_website: GodotWebsiteClient,
+    version_provider: Arc<dyn VersionProvider + Send + Sync>,
     install_service: InstallService,
     update_event: EventAdapter<VersionUpdateEventArgs>,
 }
@@ -18,6 +22,12 @@ pub struct Version {
     pub flavor: String,
     pub release_notes: String,
     pub status: VersionStatus,
+}
+
+pub struct RemoteVersion {
+    pub name: String,
+    pub flavor: String,
+    pub release_notes: String,
 }
 
 pub enum VersionStatus {
@@ -34,10 +44,13 @@ pub struct VersionUpdateEventArgs {
 }
 
 impl VersionService {
-    pub fn new(godot_website: GodotWebsiteClient, install_service: InstallService) -> Self {
+    pub fn new(
+        version_provider: Arc<dyn VersionProvider + Send + Sync>,
+        install_service: InstallService,
+    ) -> Self {
         let update_event = EventAdapter::new(install_service.update_event());
         Self {
-            godot_website,
+            version_provider,
             install_service,
             update_event,
         }
@@ -48,11 +61,10 @@ impl VersionService {
     }
 
     pub async fn list(&self) -> Result<Vec<Version>, Error> {
-        let versions = self.godot_website.list_versions().await?;
+        let versions = self.version_provider.list_versions().await?;
         let installs = self.list_installs().await?;
         Ok(versions
             .into_iter()
-            .filter(|version| version.flavor == "stable")
             .map(|version| {
                 let key = (version.name.clone(), version.flavor.clone());
                 let status = if let Some(install) = installs.get(&key) {
@@ -64,10 +76,7 @@ impl VersionService {
                 Version {
                     name: version.name,
                     flavor: version.flavor,
-                    release_notes: format!(
-                        "https://godotengine.org/{}",
-                        version.release_notes.trim_start_matches("/")
-                    ),
+                    release_notes: version.release_notes,
                     status,
                 }
             })

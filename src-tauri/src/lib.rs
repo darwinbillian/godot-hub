@@ -6,13 +6,15 @@ mod services;
 mod state;
 mod utils;
 
+use std::sync::Arc;
+
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 use reqwest::Client;
 use reqwest_middleware::ClientBuilder;
 use tauri::Manager;
 
 use crate::{
-    godot_website::GodotWebsiteClient,
+    godot_website::{GodotWebsiteClient, GodotWebsiteVersionProvider},
     ipc::features::{
         install::emitter::{InstallRemoveEmitter, InstallUpdateEmitter},
         version::emitter::VersionUpdateEmitter,
@@ -46,6 +48,8 @@ pub fn run() {
 
             let godot_website = GodotWebsiteClient::new(client.clone());
 
+            let version_provider = Arc::new(GodotWebsiteVersionProvider::new(godot_website));
+
             let download_service =
                 DownloadService::new(client.clone(), local_data_dir.join("downloads"));
 
@@ -65,7 +69,7 @@ pub fn run() {
                 .remove_event()
                 .subscribe(InstallRemoveEmitter::new(app.handle().clone()));
 
-            let version_service = VersionService::new(godot_website, install_service.clone());
+            let version_service = VersionService::new(version_provider, install_service.clone());
 
             version_service
                 .update_event()
