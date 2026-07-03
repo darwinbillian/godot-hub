@@ -3,9 +3,12 @@ use std::borrow::Borrow;
 use serde::Serialize;
 
 use crate::{
-    application::services::install::{
-        Install, InstallProgress, InstallRemoveEventArgs, InstallStatus, InstallUpdateEventArgs,
-        Installation,
+    application::services::{
+        download::DownloadProgress,
+        install::{
+            Install, InstallProgress, InstallRemoveEventArgs, InstallStatus,
+            InstallUpdateEventArgs, Installation,
+        },
     },
     presentation::ipc::dtos::ErrorDto,
 };
@@ -30,7 +33,7 @@ pub enum InstallStatusDto {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InstallProgressDto {
     Starting,
-    Downloading,
+    Downloading { progress: DownloadProgressDto },
     Extracting,
     Finalizing,
 }
@@ -49,6 +52,12 @@ pub struct InstallUpdateEventArgsDto {
 #[derive(Serialize, Debug)]
 pub struct InstallRemoveEventArgsDto {
     id: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct DownloadProgressDto {
+    downloaded: u64,
+    size: Option<u64>,
 }
 
 impl From<Install> for InstallDto {
@@ -90,7 +99,9 @@ where
         let value = value.borrow();
         match value {
             InstallProgress::Starting => Self::Starting,
-            InstallProgress::Downloading => Self::Downloading,
+            InstallProgress::Downloading(progress) => Self::Downloading {
+                progress: progress.into(),
+            },
             InstallProgress::Extracting => Self::Extracting,
             InstallProgress::Finalizing => Self::Finalizing,
         }
@@ -130,6 +141,19 @@ where
         let value = value.borrow();
         Self {
             id: value.id.clone(),
+        }
+    }
+}
+
+impl<D> From<D> for DownloadProgressDto
+where
+    D: Borrow<DownloadProgress>,
+{
+    fn from(value: D) -> Self {
+        let value = value.borrow();
+        Self {
+            downloaded: value.downloaded,
+            size: value.size,
         }
     }
 }

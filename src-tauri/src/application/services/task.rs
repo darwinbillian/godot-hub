@@ -200,6 +200,14 @@ impl<TState, TProgress, TResult> Clone for TaskHandle<TState, TProgress, TResult
     }
 }
 
+impl<TState, TProgress, TResult> Clone for TaskReporter<TState, TProgress, TResult> {
+    fn clone(&self) -> Self {
+        Self {
+            handle: self.handle.clone(),
+        }
+    }
+}
+
 impl<TProgress, TResult> Clone for TaskStatus<TProgress, TResult> {
     fn clone(&self) -> Self {
         match self {

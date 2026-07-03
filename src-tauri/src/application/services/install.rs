@@ -10,8 +10,8 @@ use tokio::process::Command;
 
 use crate::{
     application::services::{
-        download::{Download, DownloadService},
-        task::{Task, TaskService, TaskStatus, TaskUpdateEventArgs},
+        download::{Download, DownloadProgress, DownloadService},
+        task::{Task, TaskReporter, TaskService, TaskStatus, TaskUpdateEventArgs},
     },
     error::Error,
     event::{EventAdapter, EventDispatcher, EventRepeater},
@@ -59,7 +59,7 @@ pub enum InstallStatus {
 pub enum InstallProgress {
     #[default]
     Starting,
-    Downloading,
+    Downloading(DownloadProgress),
     Extracting,
     Finalizing,
 }
@@ -136,8 +136,7 @@ impl InstallService {
         self.inner
             .task_service
             .run(task, async |reporter| -> Result<Installation, Error> {
-                reporter.report(InstallProgress::Downloading);
-                let download_path = self.download(version, flavor).await?;
+                let download_path = self.download(reporter.clone(), version, flavor).await?;
 
                 reporter.report(InstallProgress::Extracting);
                 let dir = self.inner.dir.join(&id);
@@ -194,7 +193,12 @@ impl InstallService {
         Ok(install)
     }
 
-    async fn download(&self, version: &str, flavor: &str) -> Result<PathBuf, Error> {
+    async fn download(
+        &self,
+        reporter: TaskReporter<InstallState, InstallProgress, Installation>,
+        version: &str,
+        flavor: &str,
+    ) -> Result<PathBuf, Error> {
         let url = self.inner.download_provider.get_download_url(
             version,
             flavor,
@@ -203,6 +207,11 @@ impl InstallService {
         );
         let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
         let download = Download::new(&url, &name);
+        download.progress_event().subscribe(move |progress| {
+            reporter.report(InstallProgress::Downloading(DownloadProgress::from(
+                progress,
+            )));
+        });
         let path = self.inner.download_service.download(download).await?;
         Ok(path)
     }

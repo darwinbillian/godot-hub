@@ -14,7 +14,7 @@ export type InstallStatus =
 
 export type InstallProgress =
   | { type: "starting" }
-  | { type: "downloading" }
+  | { type: "downloading"; progress: DownloadProgress }
   | { type: "extracting" }
   | { type: "finalizing" };
 
@@ -29,4 +29,9 @@ export interface InstallUpdateEventArgs {
 
 export interface InstallRemoveEventArgs {
   id: string;
+}
+
+export interface DownloadProgress {
+  downloaded: number;
+  size?: number;
 }

@@ -118,7 +118,9 @@ function InstallCardBody({ install }: { install: Install }) {
       case "starting":
         return <>Starting...</>;
       case "downloading":
-        return <>Downloading...</>;
+        const { downloaded, size } = install.status.progress.progress;
+        const percentage = size ? (downloaded / size) * 100 : 0;
+        return <>Downloading... ({Math.floor(percentage)}%) </>;
       case "extracting":
         return <>Extracting...</>;
       case "finalizing":
