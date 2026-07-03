@@ -9,45 +9,49 @@ use crate::{
     event::{EventDispatcher, EventRepeater},
 };
 
-pub struct TaskService<TState, TResult> {
-    inner: Arc<TaskServiceInner<TState, TResult>>,
+pub struct TaskService<TState, TProgress, TResult> {
+    inner: Arc<TaskServiceInner<TState, TProgress, TResult>>,
 }
 
-pub struct TaskServiceInner<TState, TResult> {
-    update_event: EventRepeater<TaskUpdateEventArgs<TState, TResult>>,
-    tasks: Mutex<HashMap<String, TaskHandle<TState, TResult>>>,
+pub struct TaskServiceInner<TState, TProgress, TResult> {
+    update_event: EventRepeater<TaskUpdateEventArgs<TState, TProgress, TResult>>,
+    tasks: Mutex<HashMap<String, TaskHandle<TState, TProgress, TResult>>>,
 }
 
-pub struct Task<TState, TResult> {
+pub struct Task<TState, TProgress, TResult> {
     pub id: String,
     pub state: Arc<TState>,
-    pub status: TaskStatus<TResult>,
+    pub status: TaskStatus<TProgress, TResult>,
 }
 
-pub struct TaskHandle<TState, TResult> {
-    inner: Arc<TaskHandleInner<TState, TResult>>,
+pub struct TaskHandle<TState, TProgress, TResult> {
+    inner: Arc<TaskHandleInner<TState, TProgress, TResult>>,
 }
 
-pub struct TaskHandleInner<TState, TResult> {
-    update_event: EventDispatcher<TaskUpdateEventArgs<TState, TResult>>,
+pub struct TaskReporter<TState, TProgress, TResult> {
+    handle: TaskHandle<TState, TProgress, TResult>,
+}
+
+pub struct TaskHandleInner<TState, TProgress, TResult> {
+    update_event: EventDispatcher<TaskUpdateEventArgs<TState, TProgress, TResult>>,
     id: String,
     state: Arc<TState>,
-    status: Mutex<TaskStatus<TResult>>,
+    status: Mutex<TaskStatus<TProgress, TResult>>,
 }
 
-pub enum TaskStatus<TResult> {
+pub enum TaskStatus<TProgress, TResult> {
     Pending,
-    Running,
+    Running(Arc<TProgress>),
     Completed(Arc<TResult>),
     Failed(Arc<Error>),
 }
 
-pub struct TaskUpdateEventArgs<TState, TResult> {
+pub struct TaskUpdateEventArgs<TState, TProgress, TResult> {
     pub state: Arc<TState>,
-    pub status: TaskStatus<TResult>,
+    pub status: TaskStatus<TProgress, TResult>,
 }
 
-impl<TState, TResult> TaskService<TState, TResult> {
+impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
     pub fn new() -> Self {
         TaskService {
             inner: Arc::new(TaskServiceInner {
@@ -57,15 +61,16 @@ impl<TState, TResult> TaskService<TState, TResult> {
         }
     }
 
-    pub fn update_event(&self) -> &EventRepeater<TaskUpdateEventArgs<TState, TResult>> {
+    pub fn update_event(&self) -> &EventRepeater<TaskUpdateEventArgs<TState, TProgress, TResult>> {
         &self.inner.update_event
     }
 
-    pub async fn start<F>(&self, task: Task<TState, TResult>, f: F) -> Result<(), Error>
+    pub async fn run<F>(&self, task: Task<TState, TProgress, TResult>, f: F) -> Result<(), Error>
     where
         TState: 'static,
+        TProgress: Default + 'static,
         TResult: Send + Sync + 'static,
-        F: AsyncFnOnce() -> Result<TResult, Error>,
+        F: AsyncFnOnce(TaskReporter<TState, TProgress, TResult>) -> Result<TResult, Error>,
     {
         let id = task.id.clone();
         let handle = task.into_handle();
@@ -77,9 +82,10 @@ impl<TState, TResult> TaskService<TState, TResult> {
             tasks.insert(id.clone(), handle.clone());
         }
 
-        handle.set_status(TaskStatus::Running);
+        handle.set_status(TaskStatus::Running(Arc::new(TProgress::default())));
 
-        let result = match f().await {
+        let reporter = TaskReporter::new(handle.clone());
+        let result = match f(reporter).await {
             Ok(result) => result,
             Err(e) => {
                 handle.set_status(TaskStatus::Failed(Arc::new(e)));
@@ -97,13 +103,13 @@ impl<TState, TResult> TaskService<TState, TResult> {
         Ok(())
     }
 
-    pub fn list(&self) -> Vec<Task<TState, TResult>> {
+    pub fn list(&self) -> Vec<Task<TState, TProgress, TResult>> {
         let tasks = self.inner.tasks.lock().unwrap();
         tasks.values().map(Task::from).collect()
     }
 }
 
-impl<TState, TResult> Task<TState, TResult> {
+impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
     pub fn new(id: &str, state: TState) -> Self {
         Task {
             id: id.to_owned(),
@@ -112,7 +118,7 @@ impl<TState, TResult> Task<TState, TResult> {
         }
     }
 
-    pub fn into_handle(self) -> TaskHandle<TState, TResult> {
+    pub fn into_handle(self) -> TaskHandle<TState, TProgress, TResult> {
         TaskHandle {
             inner: Arc::new(TaskHandleInner {
                 update_event: EventDispatcher::new(),
@@ -124,12 +130,14 @@ impl<TState, TResult> Task<TState, TResult> {
     }
 }
 
-impl<TState, TResult> TaskHandle<TState, TResult> {
-    pub fn update_event(&self) -> &EventDispatcher<TaskUpdateEventArgs<TState, TResult>> {
+impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
+    pub fn update_event(
+        &self,
+    ) -> &EventDispatcher<TaskUpdateEventArgs<TState, TProgress, TResult>> {
         &self.inner.update_event
     }
 
-    pub fn set_status(&self, status: TaskStatus<TResult>) {
+    pub fn set_status(&self, status: TaskStatus<TProgress, TResult>) {
         {
             let mut inner = self.inner.status.lock().unwrap();
             *inner = status;
@@ -140,9 +148,20 @@ impl<TState, TResult> TaskHandle<TState, TResult> {
     }
 }
 
-impl<TState, TStatus, T> From<T> for Task<TState, TStatus>
+impl<TState, TProgress, TResult> TaskReporter<TState, TProgress, TResult> {
+    pub fn new(handle: TaskHandle<TState, TProgress, TResult>) -> Self {
+        Self { handle }
+    }
+
+    pub fn report(&self, progress: TProgress) {
+        self.handle
+            .set_status(TaskStatus::Running(Arc::new(progress)))
+    }
+}
+
+impl<TState, TProgress, TStatus, T> From<T> for Task<TState, TProgress, TStatus>
 where
-    T: Borrow<TaskHandle<TState, TStatus>>,
+    T: Borrow<TaskHandle<TState, TProgress, TStatus>>,
 {
     fn from(value: T) -> Self {
         let value = value.borrow();
@@ -154,8 +173,10 @@ where
     }
 }
 
-impl<TState, TResult> From<Task<TState, TResult>> for TaskUpdateEventArgs<TState, TResult> {
-    fn from(value: Task<TState, TResult>) -> Self {
+impl<TState, TProgress, TResult> From<Task<TState, TProgress, TResult>>
+    for TaskUpdateEventArgs<TState, TProgress, TResult>
+{
+    fn from(value: Task<TState, TProgress, TResult>) -> Self {
         Self {
             state: value.state,
             status: value.status,
@@ -163,7 +184,7 @@ impl<TState, TResult> From<Task<TState, TResult>> for TaskUpdateEventArgs<TState
     }
 }
 
-impl<TState, TResult> Clone for TaskService<TState, TResult> {
+impl<TState, TProgress, TResult> Clone for TaskService<TState, TProgress, TResult> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -171,7 +192,7 @@ impl<TState, TResult> Clone for TaskService<TState, TResult> {
     }
 }
 
-impl<TState, TResult> Clone for TaskHandle<TState, TResult> {
+impl<TState, TProgress, TResult> Clone for TaskHandle<TState, TProgress, TResult> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -179,11 +200,11 @@ impl<TState, TResult> Clone for TaskHandle<TState, TResult> {
     }
 }
 
-impl<TResult> Clone for TaskStatus<TResult> {
+impl<TProgress, TResult> Clone for TaskStatus<TProgress, TResult> {
     fn clone(&self) -> Self {
         match self {
             Self::Pending => Self::Pending,
-            Self::Running => Self::Running,
+            Self::Running(progress) => Self::Running(progress.clone()),
             Self::Completed(result) => Self::Completed(result.clone()),
             Self::Failed(e) => Self::Failed(e.clone()),
         }

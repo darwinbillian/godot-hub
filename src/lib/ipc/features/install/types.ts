@@ -8,9 +8,15 @@ export interface Install {
 }
 
 export type InstallStatus =
-  | { type: "installing" }
+  | { type: "installing"; progress: InstallProgress }
   | { type: "installed"; installation: Installation }
   | { type: "failed"; error: Error };
+
+export type InstallProgress =
+  | { type: "starting" }
+  | { type: "downloading" }
+  | { type: "extracting" }
+  | { type: "finalizing" };
 
 export interface Installation {
   dir: string;

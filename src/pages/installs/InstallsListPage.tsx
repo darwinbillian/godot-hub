@@ -109,10 +109,29 @@ const InstallCard = memo(({ install }: { install: Install }) => {
 });
 
 function InstallCardBody({ install }: { install: Install }) {
+  const renderProgress = () => {
+    if (install.status.type !== "installing") {
+      return null;
+    }
+
+    switch (install.status.progress.type) {
+      case "starting":
+        return <>Starting...</>;
+      case "downloading":
+        return <>Downloading...</>;
+      case "extracting":
+        return <>Extracting...</>;
+      case "finalizing":
+        return <>Finalizing...</>;
+      default:
+        return null;
+    }
+  };
+
   const renderContent = () => {
     switch (install.status.type) {
       case "installing":
-        return <>In progress</>;
+        return <>{renderProgress()}</>;
       case "installed":
         return <>{install.status.installation.dir}</>;
       case "failed":

@@ -100,7 +100,7 @@ where
 {
     fn from(value: I) -> Self {
         match value.borrow() {
-            InstallStatus::Installing => Self::Installing,
+            InstallStatus::Installing(_) => Self::Installing,
             InstallStatus::Installed(_) => Self::Installed,
             InstallStatus::Failed(e) => Self::Failed(e.clone()),
         }

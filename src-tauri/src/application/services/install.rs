@@ -29,7 +29,7 @@ pub struct InstallService {
 pub struct InstallServiceInner {
     download_provider: Arc<dyn DownloadProvider + Send + Sync>,
     download_service: DownloadService,
-    task_service: TaskService<InstallState, Installation>,
+    task_service: TaskService<InstallState, InstallProgress, Installation>,
     update_event: EventAdapter<InstallUpdateEventArgs>,
     remove_event: EventRepeater<InstallRemoveEventArgs>,
     dir: PathBuf,
@@ -50,9 +50,18 @@ pub struct Install {
 
 #[derive(Clone)]
 pub enum InstallStatus {
-    Installing,
+    Installing(Arc<InstallProgress>),
     Installed(Arc<Installation>),
     Failed(Arc<Error>),
+}
+
+#[derive(Default)]
+pub enum InstallProgress {
+    #[default]
+    Starting,
+    Downloading,
+    Extracting,
+    Finalizing,
 }
 
 pub struct Installation {
@@ -91,7 +100,7 @@ impl InstallService {
     pub fn new(
         download_provider: Arc<dyn DownloadProvider + Send + Sync>,
         download_service: DownloadService,
-        task_service: TaskService<InstallState, Installation>,
+        task_service: TaskService<InstallState, InstallProgress, Installation>,
         dir: PathBuf,
     ) -> Self {
         let update_event = EventAdapter::new(task_service.update_event());
@@ -126,12 +135,15 @@ impl InstallService {
 
         self.inner
             .task_service
-            .start(task, async || -> Result<Installation, Error> {
+            .run(task, async |reporter| -> Result<Installation, Error> {
+                reporter.report(InstallProgress::Downloading);
                 let download_path = self.download(version, flavor).await?;
 
+                reporter.report(InstallProgress::Extracting);
                 let dir = self.inner.dir.join(&id);
                 crate::utils::zip::extract(download_path, &dir).await?;
 
+                reporter.report(InstallProgress::Finalizing);
                 let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
                 let metadata = InstallationMetadata {
                     version: version.to_owned(),
@@ -295,8 +307,8 @@ impl From<Installation> for Install {
     }
 }
 
-impl From<Task<InstallState, Installation>> for Install {
-    fn from(value: Task<InstallState, Installation>) -> Self {
+impl From<Task<InstallState, InstallProgress, Installation>> for Install {
+    fn from(value: Task<InstallState, InstallProgress, Installation>) -> Self {
         Install {
             id: value.state.id.clone(),
             flavor: value.state.flavor.clone(),
@@ -308,20 +320,21 @@ impl From<Task<InstallState, Installation>> for Install {
 
 impl<T> From<T> for InstallStatus
 where
-    T: Borrow<TaskStatus<Installation>>,
+    T: Borrow<TaskStatus<InstallProgress, Installation>>,
 {
     fn from(value: T) -> Self {
         match value.borrow() {
+            TaskStatus::Pending => Self::Installing(Arc::new(InstallProgress::default())),
+            TaskStatus::Running(progress) => Self::Installing(progress.clone()),
             TaskStatus::Completed(installation) => Self::Installed(installation.clone()),
             TaskStatus::Failed(e) => Self::Failed(e.clone()),
-            _ => Self::Installing,
         }
     }
 }
 
 impl<T> From<T> for InstallUpdateEventArgs
 where
-    T: Borrow<TaskUpdateEventArgs<InstallState, Installation>>,
+    T: Borrow<TaskUpdateEventArgs<InstallState, InstallProgress, Installation>>,
 {
     fn from(value: T) -> Self {
         let value = value.borrow();
