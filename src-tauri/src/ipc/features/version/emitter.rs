@@ -19,6 +19,6 @@ impl EventHandler<VersionUpdateEventArgs> for VersionUpdateEmitter {
     fn invoke(&self, args: Arc<VersionUpdateEventArgs>) {
         let _ = self
             .app
-            .emit("update_version", &VersionUpdateEventArgsDto::from(args));
+            .emit("versions::update", &VersionUpdateEventArgsDto::from(args));
     }
 }

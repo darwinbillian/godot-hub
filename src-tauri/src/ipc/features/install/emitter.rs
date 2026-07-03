@@ -32,7 +32,7 @@ impl EventHandler<InstallUpdateEventArgs> for InstallUpdateEmitter {
     fn invoke(&self, args: Arc<InstallUpdateEventArgs>) {
         let _ = self
             .app
-            .emit("update_install", &InstallUpdateEventArgsDto::from(args));
+            .emit("installs::update", &InstallUpdateEventArgsDto::from(args));
     }
 }
 
@@ -40,6 +40,6 @@ impl EventHandler<InstallRemoveEventArgs> for InstallRemoveEmitter {
     fn invoke(&self, args: Arc<InstallRemoveEventArgs>) {
         let _ = self
             .app
-            .emit("remove_install", &InstallRemoveEventArgsDto::from(args));
+            .emit("installs::remove", &InstallRemoveEventArgsDto::from(args));
     }
 }

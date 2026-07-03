@@ -78,12 +78,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             ipc::commands::show,
-            ipc::features::install::commands::install,
-            ipc::features::install::commands::list_installs,
-            ipc::features::install::commands::launch,
-            ipc::features::install::commands::uninstall,
-            ipc::features::install::commands::reveal,
-            ipc::features::version::commands::list_versions
+            ipc::features::install::commands::installs_install,
+            ipc::features::install::commands::installs_list,
+            ipc::features::install::commands::installs_launch,
+            ipc::features::install::commands::installs_uninstall,
+            ipc::features::install::commands::installs_reveal,
+            ipc::features::version::commands::versions_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

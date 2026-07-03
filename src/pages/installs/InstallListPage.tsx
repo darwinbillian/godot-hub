@@ -1,6 +1,6 @@
 import {
   launch,
-  listInstalls,
+  list,
   reveal,
   uninstall,
 } from "@/lib/ipc/features/install/commands";
@@ -23,14 +23,14 @@ export default function InstallListPage() {
   const [installs, setInstalls] = useState<Install[]>();
 
   useEffect(() => {
-    listInstalls()
+    list()
       .then((installs) => setInstalls(installs))
       .catch((e) => console.error(e));
   }, []);
 
   useEffect(() => {
     const unlisten = listen<InstallUpdateEventArgs>(
-      "update_install",
+      "installs::update",
       (event) => {
         setInstalls(
           (installs) =>
@@ -51,7 +51,7 @@ export default function InstallListPage() {
 
   useEffect(() => {
     const unlisten = listen<InstallRemoveEventArgs>(
-      "remove_install",
+      "installs::remove",
       (event) => {
         setInstalls(
           (installs) =>

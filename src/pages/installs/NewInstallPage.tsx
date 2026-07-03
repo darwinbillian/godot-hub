@@ -1,5 +1,5 @@
 import { install } from "@/lib/ipc/features/install/commands";
-import { listVersions } from "@/lib/ipc/features/version/commands";
+import { list } from "@/lib/ipc/features/version/commands";
 import {
   Version,
   VersionUpdateEventArgs,
@@ -17,14 +17,14 @@ export default function NewInstallPage() {
   const [versions, setVersions] = useState<Version[]>();
 
   useEffect(() => {
-    listVersions()
+    list()
       .then((versions) => setVersions(versions))
       .catch((e) => console.error(e));
   }, []);
 
   useEffect(() => {
     const unlisten = listen<VersionUpdateEventArgs>(
-      "update_version",
+      "versions::update",
       (event) => {
         setVersions(
           (versions) =>
