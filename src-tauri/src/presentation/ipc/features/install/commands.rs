@@ -1,7 +1,7 @@
 use tauri::State;
 
 use super::dtos::InstallDto;
-use crate::{ipc::dtos::ErrorDto, state::AppState};
+use crate::{presentation::ipc::dtos::ErrorDto, state::AppState};
 
 #[tauri::command(rename = "installs::install")]
 pub async fn installs_install(

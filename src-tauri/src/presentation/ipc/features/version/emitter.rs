@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 
 use super::dtos::VersionUpdateEventArgsDto;
-use crate::{event::EventHandler, services::version::VersionUpdateEventArgs};
+use crate::{application::services::version::VersionUpdateEventArgs, event::EventHandler};
 
 pub struct VersionUpdateEmitter {
     app: AppHandle,

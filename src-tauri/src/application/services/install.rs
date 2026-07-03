@@ -9,12 +9,12 @@ use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
 use crate::{
-    error::Error,
-    event::{EventAdapter, EventDispatcher, EventRepeater},
-    services::{
+    application::services::{
         download::DownloadService,
         task::{Task, TaskService, TaskStatus, TaskUpdateEventArgs},
     },
+    error::Error,
+    event::{EventAdapter, EventDispatcher, EventRepeater},
 };
 
 pub trait DownloadProvider {

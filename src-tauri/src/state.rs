@@ -1,4 +1,4 @@
-use crate::services::{install::InstallService, version::VersionService};
+use crate::application::services::{install::InstallService, version::VersionService};
 
 pub struct AppState {
     pub install_service: InstallService,

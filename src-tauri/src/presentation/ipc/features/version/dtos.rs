@@ -3,8 +3,8 @@ use std::borrow::Borrow;
 use serde::Serialize;
 
 use crate::{
-    ipc::dtos::ErrorDto,
-    services::version::{Version, VersionStatus, VersionUpdateEventArgs},
+    application::services::version::{Version, VersionStatus, VersionUpdateEventArgs},
+    presentation::ipc::dtos::ErrorDto,
 };
 
 #[derive(Serialize, Debug)]

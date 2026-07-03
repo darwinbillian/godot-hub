@@ -1,9 +1,11 @@
 use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
 use crate::{
+    application::services::install::{
+        Install, InstallService, InstallStatus, InstallUpdateEventArgs,
+    },
     error::Error,
     event::EventAdapter,
-    services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 
 #[async_trait::async_trait]

@@ -3,10 +3,10 @@ use std::borrow::Borrow;
 use serde::Serialize;
 
 use crate::{
-    ipc::dtos::ErrorDto,
-    services::install::{
+    application::services::install::{
         Install, InstallRemoveEventArgs, InstallStatus, InstallUpdateEventArgs, Installation,
     },
+    presentation::ipc::dtos::ErrorDto,
 };
 
 #[derive(Serialize, Debug)]

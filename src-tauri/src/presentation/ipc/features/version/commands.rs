@@ -1,7 +1,7 @@
 use tauri::State;
 
 use super::dtos::VersionDto;
-use crate::{ipc::dtos::ErrorDto, state::AppState};
+use crate::{presentation::ipc::dtos::ErrorDto, state::AppState};
 
 #[tauri::command(rename = "versions::list")]
 pub async fn versions_list(state: State<'_, AppState>) -> Result<Vec<VersionDto>, ErrorDto> {

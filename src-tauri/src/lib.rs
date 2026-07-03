@@ -1,8 +1,8 @@
+mod application;
 mod error;
 mod event;
-mod godot_website;
-mod ipc;
-mod services;
+mod infrastructure;
+mod presentation;
 mod state;
 mod utils;
 
@@ -14,16 +14,16 @@ use reqwest_middleware::ClientBuilder;
 use tauri::Manager;
 
 use crate::{
-    godot_website::{
-        GodotWebsiteClient, GodotWebsiteDownloadProvider, GodotWebsiteVersionProvider,
-    },
-    ipc::features::{
-        install::emitter::{InstallRemoveEmitter, InstallUpdateEmitter},
-        version::emitter::VersionUpdateEmitter,
-    },
-    services::{
+    application::services::{
         download::DownloadService, install::InstallService, task::TaskService,
         version::VersionService,
+    },
+    infrastructure::godot_website::{
+        GodotWebsiteClient, GodotWebsiteDownloadProvider, GodotWebsiteVersionProvider,
+    },
+    presentation::ipc::features::{
+        install::emitter::{InstallRemoveEmitter, InstallUpdateEmitter},
+        version::emitter::VersionUpdateEmitter,
     },
     state::AppState,
 };
@@ -89,13 +89,13 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            ipc::commands::show,
-            ipc::features::install::commands::installs_install,
-            ipc::features::install::commands::installs_list,
-            ipc::features::install::commands::installs_launch,
-            ipc::features::install::commands::installs_uninstall,
-            ipc::features::install::commands::installs_reveal,
-            ipc::features::version::commands::versions_list
+            presentation::ipc::commands::show,
+            presentation::ipc::features::install::commands::installs_install,
+            presentation::ipc::features::install::commands::installs_list,
+            presentation::ipc::features::install::commands::installs_launch,
+            presentation::ipc::features::install::commands::installs_uninstall,
+            presentation::ipc::features::install::commands::installs_reveal,
+            presentation::ipc::features::version::commands::versions_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
