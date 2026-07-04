@@ -94,35 +94,48 @@ export default function InstallsListPage() {
 const InstallCard = memo(({ install }: { install: Install }) => {
   return (
     <div className="card flex gap-2 p-4">
-      <div className="flex flex-1 gap-2">
+      <div>
         <img className="size-8" src="/icon.svg" />
-        <div>
-          <div className="font-semibold">Godot {install.version}</div>
-          <div className="text-sm text-neutral-400">
-            {install.status.type === "installed" ? (
-              <span>{install.status.installation.dir}</span>
-            ) : install.status.type === "failed" ? (
-              <details>
-                <summary>Failed</summary>
-                <p className="text-red-400">{install.status.error.message}</p>
-              </details>
-            ) : (
-              <span>In progress</span>
-            )}
-          </div>
-        </div>
       </div>
-      {install.status.type === "installed" && (
-        <div>
-          <InstallButton install={install} />
-        </div>
-      )}
+      <div className="flex-1">
+        <h2 className="font-semibold">Godot {install.version}</h2>
+        <InstallCardBody install={install} />
+      </div>
+      <div>
+        <InstallCardActions install={install} />
+      </div>
     </div>
   );
 });
 
-function InstallButton({ install }: { install: Install }) {
+function InstallCardBody({ install }: { install: Install }) {
+  const renderContent = () => {
+    switch (install.status.type) {
+      case "installing":
+        return <>In progress</>;
+      case "installed":
+        return <>{install.status.installation.dir}</>;
+      case "failed":
+        return (
+          <details>
+            <summary>Failed</summary>
+            <p className="text-red-400">{install.status.error.message}</p>
+          </details>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return <div className="text-sm text-neutral-400">{renderContent()}</div>;
+}
+
+function InstallCardActions({ install }: { install: Install }) {
   const [expand, setExpand] = useState(false);
+
+  if (install.status.type !== "installed") {
+    return null;
+  }
 
   return (
     <div className="relative flex items-stretch">
