@@ -24,9 +24,9 @@
 
     --btn-bg: transparent;
     --btn-hover-bg: color-mix(in oklab, var(--btn-color) 10%, transparent);
+    --btn-fg: var(--btn-color, var(--color-neutral-200));
     --btn-border: var(--btn-color, var(--color-neutral-700));
     --btn-hover-border: var(--btn-hover-color, var(--color-neutral-500));
-    color: var(--btn-rest-fg, var(--btn-color, var(--color-neutral-200)));
   }
 
   .btn-ghost {

@@ -13,6 +13,7 @@ import { listen } from "@tauri-apps/api/event";
 import {
   ChevronDownIcon,
   FolderOpenIcon,
+  HardDriveDownloadIcon,
   PlayIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -79,13 +80,29 @@ export default function InstallsListPage() {
         </div>
       </div>
       <div>
-        <ul className="list gap-4">
-          {installs?.map((install) => (
-            <li key={install.id}>
-              <InstallCard install={install} />
-            </li>
-          ))}
-        </ul>
+        {installs?.length ? (
+          <ul className="list gap-4">
+            {installs.map((install) => (
+              <li key={install.id}>
+                <InstallCard install={install} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-32 text-sm">
+            <h2 className="font-semibold">No installs</h2>
+            <p className="text-neutral-400">
+              To get started, install a version of Godot Editor.
+            </p>
+            <Link
+              className="btn btn-outline btn-primary"
+              to="/installs/install"
+            >
+              <HardDriveDownloadIcon size={16} />
+              Install Editor
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
