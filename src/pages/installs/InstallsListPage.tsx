@@ -120,7 +120,21 @@ function InstallCardBody({ install }: { install: Install }) {
       case "downloading":
         const { downloaded, size } = install.status.progress.progress;
         const percentage = size ? (downloaded / size) * 100 : 0;
-        return <>Downloading... ({Math.floor(percentage)}%) </>;
+        return (
+          <div className="flex flex-col gap-1">
+            <div>Downloading... ({Math.floor(percentage)}%)</div>
+            <div>
+              <div className="rounded-full bg-blue-900">
+                <div
+                  className="h-1 rounded-full bg-blue-500 transition-all duration-400"
+                  style={{
+                    width: `${percentage}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        );
       case "extracting":
         return <>Extracting...</>;
       case "finalizing":
