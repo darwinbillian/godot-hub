@@ -16,7 +16,8 @@ use crate::{
         version::VersionService,
     },
     infrastructure::godot_website::{
-        GodotWebsiteClient, GodotWebsiteDownloadProvider, GodotWebsiteVersionProvider,
+        client::GodotWebsiteClient,
+        providers::{GodotWebsiteDownloadProvider, GodotWebsiteVersionProvider},
     },
     presentation::ipc::features::{
         install::events::{InstallRemoveEventEmitter, InstallUpdateEventEmitter},
