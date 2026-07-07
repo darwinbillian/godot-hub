@@ -4,12 +4,8 @@ import {
   reveal,
   uninstall,
 } from "@/lib/ipc/features/install/commands";
-import {
-  Install,
-  InstallRemoveEventArgs,
-  InstallUpdateEventArgs,
-} from "@/lib/ipc/features/install/types";
-import { listen } from "@tauri-apps/api/event";
+import { removeEvent, updateEvent } from "@/lib/ipc/features/install/events";
+import { Install } from "@/lib/ipc/features/install/types";
 import {
   ChevronDownIcon,
   FolderOpenIcon,
@@ -30,41 +26,23 @@ export default function InstallsListPage() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<InstallUpdateEventArgs>(
-      "installs::update",
-      (event) => {
-        setInstalls(
-          (installs) =>
-            installs &&
-            installs.map((install) =>
-              event.payload.id === install.id
-                ? { ...install, status: event.payload.status }
-                : install,
-            ),
-        );
-      },
-    );
-
-    return () => {
-      unlisten.then((fn) => fn());
-    };
+    return updateEvent.subscribe((args) => {
+      setInstalls((installs) =>
+        installs?.map((install) =>
+          args.id === install.id
+            ? { ...install, status: args.status }
+            : install,
+        ),
+      );
+    });
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<InstallRemoveEventArgs>(
-      "installs::remove",
-      (event) => {
-        setInstalls(
-          (installs) =>
-            installs &&
-            installs.filter((install) => event.payload.id !== install.id),
-        );
-      },
-    );
-
-    return () => {
-      unlisten.then((fn) => fn());
-    };
+    return removeEvent.subscribe((args) => {
+      setInstalls((installs) =>
+        installs?.filter((install) => args.id !== install.id),
+      );
+    });
   }, []);
 
   return (

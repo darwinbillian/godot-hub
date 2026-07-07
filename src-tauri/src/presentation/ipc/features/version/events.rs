@@ -5,17 +5,17 @@ use tauri::{AppHandle, Emitter};
 use super::dtos::VersionUpdateEventArgsDto;
 use crate::{application::services::version::VersionUpdateEventArgs, event::EventHandler};
 
-pub struct VersionUpdateEmitter {
+pub struct VersionUpdateEventEmitter {
     app: AppHandle,
 }
 
-impl VersionUpdateEmitter {
+impl VersionUpdateEventEmitter {
     pub fn new(app: AppHandle) -> Self {
         Self { app }
     }
 }
 
-impl EventHandler<VersionUpdateEventArgs> for VersionUpdateEmitter {
+impl EventHandler<VersionUpdateEventArgs> for VersionUpdateEventEmitter {
     fn invoke(&self, args: Arc<VersionUpdateEventArgs>) {
         let _ = self
             .app

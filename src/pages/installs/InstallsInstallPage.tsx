@@ -1,10 +1,7 @@
 import { install } from "@/lib/ipc/features/install/commands";
 import { list } from "@/lib/ipc/features/version/commands";
-import {
-  Version,
-  VersionUpdateEventArgs,
-} from "@/lib/ipc/features/version/types";
-import { listen } from "@tauri-apps/api/event";
+import { updateEvent } from "@/lib/ipc/features/version/events";
+import { Version } from "@/lib/ipc/features/version/types";
 import {
   ArrowLeftIcon,
   ExternalLinkIcon,
@@ -23,25 +20,15 @@ export default function InstallsInstallPage() {
   }, []);
 
   useEffect(() => {
-    const unlisten = listen<VersionUpdateEventArgs>(
-      "versions::update",
-      (event) => {
-        setVersions(
-          (versions) =>
-            versions &&
-            versions.map((version) =>
-              event.payload.name === version.name &&
-              event.payload.flavor === version.flavor
-                ? { ...version, status: event.payload.status }
-                : version,
-            ),
-        );
-      },
-    );
-
-    return () => {
-      unlisten.then((fn) => fn());
-    };
+    return updateEvent.subscribe((args) => {
+      setVersions((versions) =>
+        versions?.map((version) =>
+          args.name === version.name && args.flavor === version.flavor
+            ? { ...version, status: args.status }
+            : version,
+        ),
+      );
+    });
   }, []);
 
   return (

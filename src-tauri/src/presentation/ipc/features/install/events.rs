@@ -8,27 +8,27 @@ use crate::{
     event::EventHandler,
 };
 
-pub struct InstallUpdateEmitter {
+pub struct InstallUpdateEventEmitter {
     app: AppHandle,
 }
 
-pub struct InstallRemoveEmitter {
+pub struct InstallRemoveEventEmitter {
     app: AppHandle,
 }
 
-impl InstallUpdateEmitter {
+impl InstallUpdateEventEmitter {
     pub fn new(app: AppHandle) -> Self {
         Self { app }
     }
 }
 
-impl InstallRemoveEmitter {
+impl InstallRemoveEventEmitter {
     pub fn new(app: AppHandle) -> Self {
         Self { app }
     }
 }
 
-impl EventHandler<InstallUpdateEventArgs> for InstallUpdateEmitter {
+impl EventHandler<InstallUpdateEventArgs> for InstallUpdateEventEmitter {
     fn invoke(&self, args: Arc<InstallUpdateEventArgs>) {
         let _ = self
             .app
@@ -36,7 +36,7 @@ impl EventHandler<InstallUpdateEventArgs> for InstallUpdateEmitter {
     }
 }
 
-impl EventHandler<InstallRemoveEventArgs> for InstallRemoveEmitter {
+impl EventHandler<InstallRemoveEventArgs> for InstallRemoveEventEmitter {
     fn invoke(&self, args: Arc<InstallRemoveEventArgs>) {
         let _ = self
             .app
