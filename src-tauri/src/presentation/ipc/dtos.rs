@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use serde::Serialize;
 
-use crate::error::Error;
+use crate::application::error::Error;
 
 #[derive(Serialize, Debug)]
 pub struct ErrorDto {

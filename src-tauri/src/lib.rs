@@ -1,10 +1,7 @@
 mod application;
-mod error;
-mod event;
 mod infrastructure;
 mod presentation;
 mod state;
-mod utils;
 
 use std::sync::Arc;
 

@@ -1,12 +1,12 @@
 use reqwest_middleware::ClientWithMiddleware;
 use serde::Deserialize;
 
-use crate::{
-    application::services::{
+use crate::application::{
+    error::Error,
+    services::{
         install::DownloadProvider,
         version::{RemoteVersion, VersionProvider},
     },
-    error::Error,
 };
 
 #[allow(dead_code)]

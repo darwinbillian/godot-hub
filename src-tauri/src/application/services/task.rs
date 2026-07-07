@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{
+use crate::application::{
     error::Error,
     event::{EventDispatcher, EventRepeater},
 };

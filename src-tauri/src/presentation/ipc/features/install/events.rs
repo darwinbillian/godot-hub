@@ -3,9 +3,9 @@ use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 
 use super::dtos::{InstallRemoveEventArgsDto, InstallUpdateEventArgsDto};
-use crate::{
-    application::services::install::{InstallRemoveEventArgs, InstallUpdateEventArgs},
+use crate::application::{
     event::EventHandler,
+    services::install::{InstallRemoveEventArgs, InstallUpdateEventArgs},
 };
 
 pub struct InstallUpdateEventEmitter {

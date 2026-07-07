@@ -10,7 +10,7 @@ use reqwest_middleware::ClientWithMiddleware;
 use tokio::{fs::File, io::AsyncWriteExt};
 use tokio_stream::StreamExt;
 
-use crate::{error::Error, event::EventDispatcher};
+use crate::{application::error::Error, application::event::EventDispatcher};
 
 pub struct DownloadService {
     client: ClientWithMiddleware,

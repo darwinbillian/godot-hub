@@ -2,7 +2,7 @@ use std::{fs::File, path::PathBuf};
 
 use zip::ZipArchive;
 
-use crate::error::Error;
+use crate::application::error::Error;
 
 pub async fn extract<P, Q>(path: P, directory: Q) -> Result<(), Error>
 where

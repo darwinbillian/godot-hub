@@ -8,13 +8,13 @@ use std::{
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-use crate::{
-    application::services::{
+use crate::application::{
+    error::Error,
+    event::{EventAdapter, EventDispatcher, EventRepeater},
+    services::{
         download::{Download, DownloadProgress, DownloadService},
         task::{Task, TaskReporter, TaskService, TaskStatus, TaskUpdateEventArgs},
     },
-    error::Error,
-    event::{EventAdapter, EventDispatcher, EventRepeater},
 };
 
 pub trait DownloadProvider {
@@ -140,7 +140,7 @@ impl InstallService {
 
                 reporter.report(InstallProgress::Extracting);
                 let dir = self.inner.dir.join(&id);
-                crate::utils::zip::extract(download_path, &dir).await?;
+                crate::application::utils::zip::extract(download_path, &dir).await?;
 
                 reporter.report(InstallProgress::Finalizing);
                 let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
