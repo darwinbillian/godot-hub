@@ -46,19 +46,20 @@ pub fn run() {
                 }))
                 .build();
 
-            let godot_website = GodotWebsiteClient::new(client.clone());
+            let godot_website = GodotWebsiteClient::new(client);
 
-            let version_provider = Arc::new(GodotWebsiteVersionProvider::new(godot_website));
+            let version_provider =
+                Arc::new(GodotWebsiteVersionProvider::new(godot_website.clone()));
 
-            let download_provider = Arc::new(GodotWebsiteDownloadProvider::new());
+            let download_provider =
+                Arc::new(GodotWebsiteDownloadProvider::new(godot_website.clone()));
 
             let download_service =
-                DownloadService::new(client.clone(), local_data_dir.join("downloads"));
+                DownloadService::new(download_provider, local_data_dir.join("downloads"));
 
             let task_service = TaskService::new();
 
             let install_service = InstallService::new(
-                download_provider,
                 download_service,
                 task_service.clone(),
                 local_data_dir.join("installs"),

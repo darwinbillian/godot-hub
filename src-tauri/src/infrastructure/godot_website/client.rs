@@ -1,8 +1,11 @@
+use http_cache_reqwest::CacheMode;
+use reqwest::Response;
 use reqwest_middleware::ClientWithMiddleware;
 
 use super::dtos::VersionDto;
-use crate::application::error::Error;
+use crate::application::{error::Error, services::download::DownloadRequest};
 
+#[derive(Clone)]
 pub struct GodotWebsiteClient {
     client: ClientWithMiddleware,
 }
@@ -20,5 +23,15 @@ impl GodotWebsiteClient {
         let bytes = response.bytes().await?;
         let versions = yaml_serde::from_slice::<Vec<VersionDto>>(&bytes)?;
         Ok(versions)
+    }
+
+    pub async fn download(&self, download: DownloadRequest) -> Result<Response, Error> {
+        let url = format!(
+            "https://downloads.godotengine.org/?version={}&flavor={}&slug={}&platform={}",
+            download.version, download.flavor, download.slug, download.platform
+        );
+        let request = self.client.get(url).with_extension(CacheMode::NoStore);
+        let response = request.send().await?.error_for_status()?;
+        Ok(response)
     }
 }

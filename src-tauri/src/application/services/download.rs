@@ -1,128 +1,119 @@
-use std::{
-    borrow::Borrow,
-    path::PathBuf,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{path::PathBuf, pin::Pin, sync::Arc};
 
-use http_cache_reqwest::CacheMode;
-use reqwest_middleware::ClientWithMiddleware;
+use bytes::Bytes;
 use tokio::{fs::File, io::AsyncWriteExt};
-use tokio_stream::StreamExt;
+use tokio_stream::{Stream, StreamExt};
 
-use crate::{application::error::Error, application::event::EventDispatcher};
+use crate::application::error::Error;
+
+#[async_trait::async_trait]
+pub trait DownloadProvider {
+    async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse, Error>;
+}
 
 pub struct DownloadService {
-    client: ClientWithMiddleware,
+    download_provider: Arc<dyn DownloadProvider + Send + Sync>,
     dir: PathBuf,
 }
 
-pub struct Download {
-    progress_event: EventDispatcher<DownloadProgressEventArgs>,
-    url: String,
-    name: String,
+pub struct DownloadRequest {
+    pub version: String,
+    pub flavor: String,
+    pub slug: String,
+    pub platform: String,
+}
+
+pub struct DownloadResponse {
+    pub stream: Pin<Box<dyn Stream<Item = Result<Bytes, Error>> + Send>>,
+    pub size: Option<u64>,
+}
+
+pub struct DownloadHandle {
+    pub stream: Pin<Box<dyn Stream<Item = Result<DownloadProgress, Error>> + Send>>,
+    pub path: PathBuf,
 }
 
 pub struct DownloadProgress {
     pub downloaded: u64,
     pub size: Option<u64>,
+    pub status: DownloadStatus,
 }
 
-pub struct DownloadProgressEventArgs {
-    pub downloaded: u64,
-    pub size: Option<u64>,
+#[derive(PartialEq)]
+pub enum DownloadStatus {
+    Starting,
+    Downloading,
+    Completed,
 }
+
+pub struct DownloadGuard {}
 
 impl DownloadService {
-    pub fn new(client: ClientWithMiddleware, dir: PathBuf) -> Self {
-        Self { client, dir }
+    pub fn new(download_provider: Arc<dyn DownloadProvider + Send + Sync>, dir: PathBuf) -> Self {
+        Self {
+            download_provider,
+            dir,
+        }
     }
 
-    pub async fn download(&self, download: Download) -> Result<PathBuf, Error> {
-        let request = self
-            .client
-            .get(&download.url)
-            .with_extension(CacheMode::NoStore);
-        let response = request.send().await?.error_for_status()?;
-        let size = response.content_length();
-        let mut stream = response.bytes_stream();
+    pub async fn download(&self, request: DownloadRequest) -> Result<DownloadHandle, Error> {
+        let name = format!(
+            "Godot_v{}-{}_{}",
+            request.version, request.flavor, request.slug
+        );
+        let path = self.dir.join(&name);
+
+        let response = self.download_provider.download(request).await?;
+        let stream = self.stream(response, path.clone()).await?;
+        let handle = DownloadHandle {
+            stream: Box::pin(stream),
+            path,
+        };
+
+        Ok(handle)
+    }
+
+    async fn stream(
+        &self,
+        response: DownloadResponse,
+        path: PathBuf,
+    ) -> Result<impl Stream<Item = Result<DownloadProgress, Error>>, Error> {
+        let mut response = response;
 
         tokio::fs::create_dir_all(&self.dir).await?;
 
-        let path = self.dir.join(&download.name);
         let temporary_path = path.with_added_extension("part");
         let mut file = File::create(&temporary_path).await?;
 
-        let mut last_progress = Instant::now();
-        let mut progress = DownloadProgress {
-            downloaded: 0,
-            size,
+        let size = response.size;
+        let mut downloaded = 0u64;
+
+        let stream = async_stream::try_stream! {
+            yield DownloadProgress { downloaded, size, status: DownloadStatus::Starting };
+
+            while let Some(chunk) = response.stream.try_next().await? {
+                file.write_all(&chunk).await?;
+                downloaded += chunk.len() as u64;
+                yield DownloadProgress { downloaded, size, status: DownloadStatus::Downloading };
+            }
+
+            file.flush().await?;
+            tokio::fs::rename(&temporary_path, &path).await?;
+
+            yield DownloadProgress { downloaded, size, status: DownloadStatus::Completed };
         };
 
-        download
-            .progress_event()
-            .invoke(Arc::new(DownloadProgressEventArgs::from(&progress)));
-
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
-            file.write_all(&chunk).await?;
-            progress.downloaded += chunk.len() as u64;
-            if last_progress.elapsed() >= Duration::from_millis(500) {
-                download
-                    .progress_event()
-                    .invoke(Arc::new(DownloadProgressEventArgs::from(&progress)));
-                last_progress = Instant::now();
-            }
-        }
-
-        download
-            .progress_event()
-            .invoke(Arc::new(DownloadProgressEventArgs::from(&progress)));
-
-        file.flush().await?;
-
-        tokio::fs::rename(&temporary_path, &path).await?;
-
-        Ok(path)
+        Ok(stream)
     }
 }
 
-impl Download {
-    pub fn new(url: &str, name: &str) -> Self {
+impl DownloadRequest {
+    pub fn new(version: &str, flavor: &str, slug: &str, platform: &str) -> Self {
         Self {
-            progress_event: EventDispatcher::new(),
-            url: url.to_owned(),
-            name: name.to_owned(),
-        }
-    }
-
-    pub fn progress_event(&self) -> &EventDispatcher<DownloadProgressEventArgs> {
-        &self.progress_event
-    }
-}
-
-impl<D> From<D> for DownloadProgress
-where
-    D: Borrow<DownloadProgressEventArgs>,
-{
-    fn from(value: D) -> Self {
-        let value = value.borrow();
-        Self {
-            downloaded: value.downloaded,
-            size: value.size,
-        }
-    }
-}
-
-impl<D> From<D> for DownloadProgressEventArgs
-where
-    D: Borrow<DownloadProgress>,
-{
-    fn from(value: D) -> Self {
-        let value = value.borrow();
-        Self {
-            downloaded: value.downloaded,
-            size: value.size,
+            version: version.to_owned(),
+            flavor: flavor.to_owned(),
+            slug: slug.to_owned(),
+            platform: platform.to_owned(),
         }
     }
 }

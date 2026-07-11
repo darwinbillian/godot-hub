@@ -3,23 +3,21 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
+use tokio_stream::StreamExt;
 
 use crate::application::{
     error::Error,
     event::{EventAdapter, EventDispatcher, EventRepeater},
     services::{
-        download::{Download, DownloadProgress, DownloadService},
+        download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
         task::{Task, TaskReporter, TaskService, TaskStatus, TaskUpdateEventArgs},
     },
 };
-
-pub trait DownloadProvider {
-    fn get_download_url(&self, version: &str, flavor: &str, slug: &str, platform: &str) -> String;
-}
 
 #[derive(Clone)]
 pub struct InstallService {
@@ -27,7 +25,6 @@ pub struct InstallService {
 }
 
 pub struct InstallServiceInner {
-    download_provider: Arc<dyn DownloadProvider + Send + Sync>,
     download_service: DownloadService,
     task_service: TaskService<InstallState, InstallProgress, Installation>,
     update_event: EventAdapter<InstallUpdateEventArgs>,
@@ -98,7 +95,6 @@ pub struct InstallRemoveEventArgs {
 
 impl InstallService {
     pub fn new(
-        download_provider: Arc<dyn DownloadProvider + Send + Sync>,
         download_service: DownloadService,
         task_service: TaskService<InstallState, InstallProgress, Installation>,
         dir: PathBuf,
@@ -106,7 +102,6 @@ impl InstallService {
         let update_event = EventAdapter::new(task_service.update_event());
         Self {
             inner: Arc::new(InstallServiceInner {
-                download_provider,
                 download_service,
                 task_service,
                 update_event,
@@ -199,21 +194,21 @@ impl InstallService {
         version: &str,
         flavor: &str,
     ) -> Result<PathBuf, Error> {
-        let url = self.inner.download_provider.get_download_url(
-            version,
-            flavor,
-            "win64.exe.zip",
-            "windows.64",
-        );
-        let name = format!("Godot_v{}-{}_win64.exe.zip", version, flavor);
-        let download = Download::new(&url, &name);
-        download.progress_event().subscribe(move |progress| {
-            reporter.report(InstallProgress::Downloading(DownloadProgress::from(
-                progress,
-            )));
-        });
-        let path = self.inner.download_service.download(download).await?;
-        Ok(path)
+        let request = DownloadRequest::new(version, flavor, "win64.exe.zip", "windows.64");
+        let mut handle = self.inner.download_service.download(request).await?;
+
+        let mut last_progress = Instant::now();
+
+        while let Some(progress) = handle.stream.try_next().await? {
+            if progress.status != DownloadStatus::Downloading
+                || last_progress.elapsed() > Duration::from_millis(500)
+            {
+                reporter.report(InstallProgress::Downloading(progress));
+                last_progress = Instant::now();
+            }
+        }
+
+        Ok(handle.path)
     }
 
     async fn list_installations(&self) -> Result<Vec<Installation>, Error> {

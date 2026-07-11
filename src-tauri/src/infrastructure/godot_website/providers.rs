@@ -1,8 +1,10 @@
+use tokio_stream::StreamExt;
+
 use super::client::GodotWebsiteClient;
 use crate::application::{
     error::Error,
     services::{
-        install::DownloadProvider,
+        download::{DownloadProvider, DownloadRequest, DownloadResponse},
         version::{RemoteVersion, VersionProvider},
     },
 };
@@ -11,7 +13,9 @@ pub struct GodotWebsiteVersionProvider {
     client: GodotWebsiteClient,
 }
 
-pub struct GodotWebsiteDownloadProvider;
+pub struct GodotWebsiteDownloadProvider {
+    client: GodotWebsiteClient,
+}
 
 impl GodotWebsiteVersionProvider {
     pub fn new(client: GodotWebsiteClient) -> Self {
@@ -20,8 +24,8 @@ impl GodotWebsiteVersionProvider {
 }
 
 impl GodotWebsiteDownloadProvider {
-    pub fn new() -> Self {
-        Self
+    pub fn new(client: GodotWebsiteClient) -> Self {
+        Self { client }
     }
 }
 
@@ -44,11 +48,18 @@ impl VersionProvider for GodotWebsiteVersionProvider {
     }
 }
 
+#[async_trait::async_trait]
 impl DownloadProvider for GodotWebsiteDownloadProvider {
-    fn get_download_url(&self, version: &str, flavor: &str, slug: &str, platform: &str) -> String {
-        format!(
-            "https://downloads.godotengine.org/?version={}&flavor={}&slug={}&platform={}",
-            version, flavor, slug, platform
-        )
+    async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse, Error> {
+        let response = self.client.download(download).await?;
+        let size = response.content_length();
+        let stream = response.bytes_stream();
+
+        let response = DownloadResponse {
+            stream: Box::pin(stream.map(|chunk| chunk.map_err(Error::from))),
+            size,
+        };
+
+        Ok(response)
     }
 }
