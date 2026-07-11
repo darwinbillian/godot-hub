@@ -1,10 +1,10 @@
 use std::{path::PathBuf, pin::Pin, sync::Arc};
 
 use bytes::Bytes;
-use tokio::{fs::File, io::AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use tokio_stream::{Stream, StreamExt};
 
-use crate::application::error::Error;
+use crate::application::{error::Error, utils::fs::FileGuard};
 
 #[async_trait::async_trait]
 pub trait DownloadProvider {
@@ -46,8 +46,6 @@ pub enum DownloadStatus {
     Completed,
 }
 
-pub struct DownloadGuard {}
-
 impl DownloadService {
     pub fn new(download_provider: Arc<dyn DownloadProvider + Send + Sync>, dir: PathBuf) -> Self {
         Self {
@@ -83,7 +81,7 @@ impl DownloadService {
         tokio::fs::create_dir_all(&self.dir).await?;
 
         let temporary_path = path.with_added_extension("part");
-        let mut file = File::create(&temporary_path).await?;
+        let mut file = FileGuard::create(&temporary_path).await?;
 
         let size = response.size;
         let mut downloaded = 0u64;
@@ -99,6 +97,7 @@ impl DownloadService {
 
             file.flush().await?;
             tokio::fs::rename(&temporary_path, &path).await?;
+            file.disarm();
 
             yield DownloadProgress { downloaded, size, status: DownloadStatus::Completed };
         };
