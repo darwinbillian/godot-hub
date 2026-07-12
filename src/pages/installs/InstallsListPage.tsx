@@ -1,5 +1,6 @@
 import { ProgressBar } from "@/components/ProgressBar";
 import {
+  cancel,
   launch,
   list,
   reveal,
@@ -17,6 +18,7 @@ import {
   HardDriveDownloadIcon,
   PlayIcon,
   Trash2Icon,
+  XIcon,
 } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 import { Link } from "react-router";
@@ -164,7 +166,19 @@ function InstallCardBody({ install }: { install: Install }) {
         let { text, percentage } = getProgress();
         return (
           <div className="flex flex-col gap-1">
-            <div>{text}</div>
+            <div className="flex">
+              <div className="flex-1">{text}</div>
+              <div>
+                <button
+                  className="btn btn-ghost p-1"
+                  onClick={() => {
+                    cancel(install.id).catch((e) => console.error(e));
+                  }}
+                >
+                  <XIcon size={16} />
+                </button>
+              </div>
+            </div>
             <div>
               <ProgressBar value={percentage} />
             </div>

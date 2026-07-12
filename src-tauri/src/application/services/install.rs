@@ -16,7 +16,7 @@ use crate::application::{
         installation::{
             Installation, InstallationMetadata, InstallationRemoveEventArgs, InstallationService,
         },
-        task::{Task, TaskReporter, TaskService, TaskStartEventArgs, TaskStatus},
+        task::{Task, TaskController, TaskError, TaskService, TaskStartEventArgs, TaskStatus},
     },
 };
 
@@ -105,6 +105,7 @@ impl InstallService {
                         InstallStatus::Installed(installation.clone())
                     }
                     TaskStatus::Running(progress) => InstallStatus::Installing(progress.clone()),
+                    TaskStatus::Cancelled => return None,
                     TaskStatus::Failed(e) => InstallStatus::Failed(e.clone()),
                 };
 
@@ -118,6 +119,18 @@ impl InstallService {
                 Some(args)
             })
             .subscribe(update_event.clone());
+
+        task_service
+            .update_event()
+            .filter_map(|args| {
+                let args = match &args.status {
+                    TaskStatus::Cancelled => InstallRemoveEventArgs::new(&args.state.id),
+                    _ => return None,
+                };
+
+                Some(args)
+            })
+            .subscribe(remove_event.clone());
 
         Self {
             inner: Arc::new(InstallServiceInner {
@@ -150,28 +163,38 @@ impl InstallService {
 
         self.inner
             .task_service
-            .run(task, async |reporter| -> Result<Installation, Error> {
-                let download_path = self.download(reporter.clone(), version, flavor).await?;
+            .run(
+                task,
+                async |controller| -> Result<Installation, TaskError> {
+                    let download_path = self.download(controller.clone(), version, flavor).await?;
 
-                reporter.report(InstallProgress::Extracting);
-                let installation = self.inner.installation_service.create(&id, version, flavor);
-                crate::application::utils::zip::extract(download_path, &installation.dir).await?;
+                    controller.report(InstallProgress::Extracting);
+                    let installation = self.inner.installation_service.create(&id, version, flavor);
+                    crate::application::utils::zip::extract(download_path, &installation.dir)
+                        .await?;
 
-                reporter.report(InstallProgress::Finalizing);
-                let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
-                let metadata = InstallationMetadata {
-                    version: version.to_owned(),
-                    flavor: flavor.to_owned(),
-                    executable,
-                };
+                    controller.report(InstallProgress::Finalizing);
+                    let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
+                    let metadata = InstallationMetadata {
+                        version: version.to_owned(),
+                        flavor: flavor.to_owned(),
+                        executable,
+                    };
 
-                metadata.save(&installation.dir).await?;
+                    metadata.save(&installation.dir).await?;
 
-                Ok(installation)
-            })
+                    Ok(installation)
+                },
+            )
             .await?;
 
         Ok(())
+    }
+
+    pub fn cancel(&self, id: &str) {
+        if let Some(task) = self.inner.task_service.get(id) {
+            task.cancel();
+        }
     }
 
     pub async fn list(&self) -> Result<Vec<Install>, Error> {
@@ -185,6 +208,7 @@ impl InstallService {
                 TaskStatus::Pending => continue,
                 TaskStatus::Running(progress) => InstallStatus::Installing(progress),
                 TaskStatus::Completed(_) => continue,
+                TaskStatus::Cancelled => continue,
                 TaskStatus::Failed(e) => InstallStatus::Failed(e),
             };
 
@@ -210,12 +234,16 @@ impl InstallService {
 
     async fn download(
         &self,
-        reporter: TaskReporter<InstallState, InstallProgress, Installation>,
+        controller: TaskController<InstallState, InstallProgress, Installation>,
         version: &str,
         flavor: &str,
-    ) -> Result<PathBuf, Error> {
+    ) -> Result<PathBuf, TaskError> {
         let request = DownloadRequest::new(version, flavor, "win64.exe.zip", "windows.64");
-        let mut handle = self.inner.download_service.download(request).await?;
+        let mut handle = self
+            .inner
+            .download_service
+            .download(request, controller.cancellation_token().clone())
+            .await?;
 
         let mut last_progress = Instant::now();
 
@@ -223,7 +251,7 @@ impl InstallService {
             if progress.status != DownloadStatus::Downloading
                 || last_progress.elapsed() > Duration::from_millis(500)
             {
-                reporter.report(InstallProgress::Downloading(progress));
+                controller.report(InstallProgress::Downloading(progress));
                 last_progress = Instant::now();
             }
         }
@@ -239,6 +267,12 @@ impl InstallState {
             version: version.to_owned(),
             flavor: flavor.to_owned(),
         }
+    }
+}
+
+impl InstallRemoveEventArgs {
+    pub fn new(id: &str) -> Self {
+        Self { id: id.to_owned() }
     }
 }
 

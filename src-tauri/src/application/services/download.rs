@@ -3,8 +3,13 @@ use std::{path::PathBuf, pin::Pin, sync::Arc};
 use bytes::Bytes;
 use tokio::io::AsyncWriteExt;
 use tokio_stream::{Stream, StreamExt};
+use tokio_util::sync::CancellationToken;
 
-use crate::application::{error::Error, utils::fs::FileGuard};
+use crate::application::{
+    error::Error,
+    services::task::{CancellationTokenExt, TaskError},
+    utils::fs::FileGuard,
+};
 
 #[async_trait::async_trait]
 pub trait DownloadProvider {
@@ -29,7 +34,7 @@ pub struct DownloadResponse {
 }
 
 pub struct DownloadHandle {
-    pub stream: Pin<Box<dyn Stream<Item = Result<DownloadProgress, Error>> + Send>>,
+    pub stream: Pin<Box<dyn Stream<Item = Result<DownloadProgress, TaskError>> + Send>>,
     pub path: PathBuf,
 }
 
@@ -54,7 +59,11 @@ impl DownloadService {
         }
     }
 
-    pub async fn download(&self, request: DownloadRequest) -> Result<DownloadHandle, Error> {
+    pub async fn download(
+        &self,
+        request: DownloadRequest,
+        cancellation_token: CancellationToken,
+    ) -> Result<DownloadHandle, TaskError> {
         let name = format!(
             "Godot_v{}-{}_{}",
             request.version, request.flavor, request.slug
@@ -62,7 +71,9 @@ impl DownloadService {
         let path = self.dir.join(&name);
 
         let response = self.download_provider.download(request).await?;
-        let stream = self.stream(response, path.clone()).await?;
+        let stream = self
+            .stream(response, path.clone(), cancellation_token)
+            .await?;
         let handle = DownloadHandle {
             stream: Box::pin(stream),
             path,
@@ -75,8 +86,11 @@ impl DownloadService {
         &self,
         response: DownloadResponse,
         path: PathBuf,
-    ) -> Result<impl Stream<Item = Result<DownloadProgress, Error>>, Error> {
+        cancellation_token: CancellationToken,
+    ) -> Result<impl Stream<Item = Result<DownloadProgress, TaskError>>, TaskError> {
         let mut response = response;
+
+        cancellation_token.error_if_cancelled()?;
 
         tokio::fs::create_dir_all(&self.dir).await?;
 
@@ -89,7 +103,18 @@ impl DownloadService {
         let stream = async_stream::try_stream! {
             yield DownloadProgress { downloaded, size, status: DownloadStatus::Starting };
 
-            while let Some(chunk) = response.stream.try_next().await? {
+            loop {
+                let chunk = tokio::select! {
+                    biased;
+                    _ = cancellation_token.cancelled() => Err(TaskError::Cancelled),
+                    chunk = response.stream.next() => Ok(chunk),
+                };
+
+                let chunk = match chunk? {
+                    Some(chunk) => chunk?,
+                    None => break,
+                };
+
                 file.write_all(&chunk).await?;
                 downloaded += chunk.len() as u64;
                 yield DownloadProgress { downloaded, size, status: DownloadStatus::Downloading };

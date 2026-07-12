@@ -29,3 +29,9 @@ export function reveal(id: string): Promise<void> {
     id,
   });
 }
+
+export function cancel(id: string): Promise<void> {
+  return invoke<void>("installs::cancel", {
+    id,
+  });
+}

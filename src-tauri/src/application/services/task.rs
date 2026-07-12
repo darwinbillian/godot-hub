@@ -4,7 +4,13 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use tokio_util::sync::CancellationToken;
+
 use crate::application::{error::Error, event::Event};
+
+pub trait CancellationTokenExt {
+    fn error_if_cancelled(&self) -> Result<(), TaskError>;
+}
 
 pub struct TaskService<TState, TProgress, TResult> {
     inner: Arc<TaskServiceInner<TState, TProgress, TResult>>,
@@ -27,6 +33,7 @@ pub struct TaskHandle<TState, TProgress, TResult> {
 }
 
 pub struct TaskHandleInner<TState, TProgress, TResult> {
+    cancellation_token: CancellationToken,
     start_event: Event<TaskStartEventArgs>,
     update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
     id: String,
@@ -34,7 +41,7 @@ pub struct TaskHandleInner<TState, TProgress, TResult> {
     status: Mutex<TaskStatus<TProgress, TResult>>,
 }
 
-pub struct TaskReporter<TState, TProgress, TResult> {
+pub struct TaskController<TState, TProgress, TResult> {
     handle: TaskHandle<TState, TProgress, TResult>,
 }
 
@@ -42,7 +49,13 @@ pub enum TaskStatus<TProgress, TResult> {
     Pending,
     Running(Arc<TProgress>),
     Completed(Arc<TResult>),
+    Cancelled,
     Failed(Arc<Error>),
+}
+
+pub enum TaskError {
+    Cancelled,
+    Failed(Error),
 }
 
 pub struct TaskStartEventArgs;
@@ -76,7 +89,7 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
         TState: 'static,
         TProgress: Default + 'static,
         TResult: 'static,
-        F: AsyncFnOnce(TaskReporter<TState, TProgress, TResult>) -> Result<TResult, Error>,
+        F: AsyncFnOnce(TaskController<TState, TProgress, TResult>) -> Result<TResult, TaskError>,
     {
         let handle = task.into_handle();
 
@@ -102,6 +115,11 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
         let tasks = self.inner.tasks.lock().unwrap();
         tasks.values().map(Task::from).collect()
     }
+
+    pub fn get(&self, id: &str) -> Option<TaskHandle<TState, TProgress, TResult>> {
+        let tasks = self.inner.tasks.lock().unwrap();
+        tasks.get(id).cloned()
+    }
 }
 
 impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
@@ -116,6 +134,7 @@ impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
     pub fn into_handle(self) -> TaskHandle<TState, TProgress, TResult> {
         TaskHandle {
             inner: Arc::new(TaskHandleInner {
+                cancellation_token: CancellationToken::new(),
                 start_event: Event::new(),
                 update_event: Event::new(),
                 id: self.id,
@@ -154,27 +173,38 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
     pub async fn run<F>(&self, f: F)
     where
         TProgress: Default,
-        F: AsyncFnOnce(TaskReporter<TState, TProgress, TResult>) -> Result<TResult, Error>,
+        F: AsyncFnOnce(TaskController<TState, TProgress, TResult>) -> Result<TResult, TaskError>,
     {
-        let reporter = TaskReporter::new(self.clone());
+        let controller = TaskController::new(self.clone());
 
         self.set_status(TaskStatus::Running(Arc::new(TProgress::default())));
 
         let args = TaskStartEventArgs::new();
         self.inner.start_event.invoke(Arc::new(args));
 
-        let status = match f(reporter).await {
+        let status = match f(controller).await {
             Ok(result) => TaskStatus::Completed(Arc::new(result)),
-            Err(e) => TaskStatus::Failed(Arc::new(e)),
+            Err(e) => match e {
+                TaskError::Cancelled => TaskStatus::Cancelled,
+                TaskError::Failed(e) => TaskStatus::Failed(Arc::new(e)),
+            },
         };
 
         self.update_status(status);
     }
+
+    pub fn cancel(&self) {
+        self.inner.cancellation_token.cancel();
+    }
 }
 
-impl<TState, TProgress, TResult> TaskReporter<TState, TProgress, TResult> {
+impl<TState, TProgress, TResult> TaskController<TState, TProgress, TResult> {
     pub fn new(handle: TaskHandle<TState, TProgress, TResult>) -> Self {
         Self { handle }
+    }
+
+    pub fn cancellation_token(&self) -> &CancellationToken {
+        &self.handle.inner.cancellation_token
     }
 
     pub fn report(&self, progress: TProgress) {
@@ -189,6 +219,16 @@ impl TaskStartEventArgs {
     }
 }
 
+impl CancellationTokenExt for CancellationToken {
+    fn error_if_cancelled(&self) -> Result<(), TaskError> {
+        if self.is_cancelled() {
+            Err(TaskError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 impl<TState, TProgress, TStatus, T> From<T> for Task<TState, TProgress, TStatus>
 where
     T: Borrow<TaskHandle<TState, TProgress, TStatus>>,
@@ -200,6 +240,15 @@ where
             state: value.inner.state.clone(),
             status: value.inner.status.lock().unwrap().clone(),
         }
+    }
+}
+
+impl<E> From<E> for TaskError
+where
+    E: Into<Error>,
+{
+    fn from(value: E) -> Self {
+        TaskError::Failed(Into::into(value))
     }
 }
 
@@ -230,7 +279,7 @@ impl<TState, TProgress, TResult> Clone for TaskHandle<TState, TProgress, TResult
     }
 }
 
-impl<TState, TProgress, TResult> Clone for TaskReporter<TState, TProgress, TResult> {
+impl<TState, TProgress, TResult> Clone for TaskController<TState, TProgress, TResult> {
     fn clone(&self) -> Self {
         Self {
             handle: self.handle.clone(),
@@ -244,6 +293,7 @@ impl<TProgress, TResult> Clone for TaskStatus<TProgress, TResult> {
             Self::Pending => Self::Pending,
             Self::Running(progress) => Self::Running(progress.clone()),
             Self::Completed(result) => Self::Completed(result.clone()),
+            Self::Cancelled => Self::Cancelled,
             Self::Failed(e) => Self::Failed(e.clone()),
         }
     }

@@ -39,3 +39,9 @@ pub async fn installs_reveal(state: State<'_, AppState>, id: String) -> Result<(
     install.reveal().await?;
     Ok(())
 }
+
+#[tauri::command(rename = "installs::cancel")]
+pub async fn installs_cancel(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
+    state.install_service.cancel(&id);
+    Ok(())
+}
