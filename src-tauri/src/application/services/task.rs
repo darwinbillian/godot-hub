@@ -25,15 +25,15 @@ pub struct TaskHandle<TState, TProgress, TResult> {
     inner: Arc<TaskHandleInner<TState, TProgress, TResult>>,
 }
 
-pub struct TaskReporter<TState, TProgress, TResult> {
-    handle: TaskHandle<TState, TProgress, TResult>,
-}
-
 pub struct TaskHandleInner<TState, TProgress, TResult> {
     update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
     id: String,
     state: Arc<TState>,
     status: Mutex<TaskStatus<TProgress, TResult>>,
+}
+
+pub struct TaskReporter<TState, TProgress, TResult> {
+    handle: TaskHandle<TState, TProgress, TResult>,
 }
 
 pub enum TaskStatus<TProgress, TResult> {
@@ -66,7 +66,7 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
     where
         TState: 'static,
         TProgress: Default + 'static,
-        TResult: Send + Sync + 'static,
+        TResult: 'static,
         F: AsyncFnOnce(TaskReporter<TState, TProgress, TResult>) -> Result<TResult, Error>,
     {
         let id = task.id.clone();
@@ -81,18 +81,7 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
             tasks.insert(id.clone(), handle.clone());
         }
 
-        handle.set_status(TaskStatus::Running(Arc::new(TProgress::default())));
-
-        let reporter = TaskReporter::new(handle.clone());
-        let result = match f(reporter).await {
-            Ok(result) => result,
-            Err(e) => {
-                handle.set_status(TaskStatus::Failed(Arc::new(e)));
-                return Ok(());
-            }
-        };
-
-        handle.set_status(TaskStatus::Completed(Arc::new(result)));
+        handle.run(f).await;
 
         {
             let mut tasks = self.inner.tasks.lock().unwrap();
@@ -142,6 +131,23 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
 
         let args = TaskUpdateEventArgs::from(Task::from(self));
         self.inner.update_event.invoke(Arc::new(args));
+    }
+
+    pub async fn run<F>(&self, f: F)
+    where
+        TProgress: Default,
+        F: AsyncFnOnce(TaskReporter<TState, TProgress, TResult>) -> Result<TResult, Error>,
+    {
+        let reporter = TaskReporter::new(self.clone());
+
+        self.set_status(TaskStatus::Running(Arc::new(TProgress::default())));
+
+        let status = match f(reporter).await {
+            Ok(result) => TaskStatus::Completed(Arc::new(result)),
+            Err(e) => TaskStatus::Failed(Arc::new(e)),
+        };
+
+        self.set_status(status);
     }
 }
 
