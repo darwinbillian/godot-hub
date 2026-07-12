@@ -12,8 +12,8 @@ use tauri::Manager;
 
 use crate::{
     application::services::{
-        download::DownloadService, install::InstallService, task::TaskService,
-        version::VersionService,
+        download::DownloadService, install::InstallService, installation::InstallationService,
+        task::TaskService, version::VersionService,
     },
     infrastructure::godot_website::{
         client::GodotWebsiteClient,
@@ -57,13 +57,17 @@ pub fn run() {
             let download_service =
                 DownloadService::new(download_provider, local_data_dir.join("downloads"));
 
+            let installation_service = InstallationService::new(&local_data_dir.join("installs"));
+
             let task_service = TaskService::new();
 
             let install_service = InstallService::new(
                 download_service,
+                installation_service.clone(),
                 task_service.clone(),
-                local_data_dir.join("installs"),
             );
+
+            let version_service = VersionService::new(version_provider, install_service.clone());
 
             install_service
                 .update_event()
@@ -73,16 +77,16 @@ pub fn run() {
                 .remove_event()
                 .subscribe(InstallRemoveEventEmitter::new(app.handle().clone()));
 
-            let version_service = VersionService::new(version_provider, install_service.clone());
-
             version_service
                 .update_event()
                 .subscribe(VersionUpdateEventEmitter::new(app.handle().clone()));
 
             let state = AppState {
                 install_service,
+                installation_service,
                 version_service,
             };
+
             app.manage(state);
 
             Ok(())

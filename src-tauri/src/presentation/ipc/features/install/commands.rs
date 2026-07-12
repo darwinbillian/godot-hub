@@ -21,21 +21,21 @@ pub async fn installs_list(state: State<'_, AppState>) -> Result<Vec<InstallDto>
 
 #[tauri::command(rename = "installs::launch")]
 pub async fn installs_launch(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
-    let install = state.install_service.get(&id).await?;
+    let install = state.installation_service.get(&id).await?;
     install.launch().await?;
     Ok(())
 }
 
 #[tauri::command(rename = "installs::uninstall")]
 pub async fn installs_uninstall(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
-    let install = state.install_service.get(&id).await?;
+    let install = state.installation_service.get(&id).await?;
     install.uninstall().await?;
     Ok(())
 }
 
 #[tauri::command(rename = "installs::reveal")]
 pub async fn installs_reveal(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
-    let install = state.install_service.get(&id).await?;
+    let install = state.installation_service.get(&id).await?;
     install.reveal().await?;
     Ok(())
 }

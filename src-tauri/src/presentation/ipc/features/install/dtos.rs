@@ -6,9 +6,9 @@ use crate::{
     application::services::{
         download::DownloadProgress,
         install::{
-            Install, InstallProgress, InstallRemoveEventArgs, InstallStatus,
-            InstallUpdateEventArgs, Installation,
+            Install, InstallProgress, InstallRemoveEventArgs, InstallStatus, InstallUpdateEventArgs,
         },
+        installation::Installation,
     },
     presentation::ipc::dtos::ErrorDto,
 };

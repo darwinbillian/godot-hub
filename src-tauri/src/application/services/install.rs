@@ -1,13 +1,11 @@
 use std::{
     borrow::Borrow,
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::Arc,
     time::{Duration, Instant},
 };
 
-use serde::{Deserialize, Serialize};
-use tokio::process::Command;
 use tokio_stream::StreamExt;
 
 use crate::application::{
@@ -15,6 +13,9 @@ use crate::application::{
     event::Event,
     services::{
         download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
+        installation::{
+            Installation, InstallationMetadata, InstallationRemoveEventArgs, InstallationService,
+        },
         task::{Task, TaskReporter, TaskService, TaskStatus, TaskUpdateEventArgs},
     },
 };
@@ -26,10 +27,10 @@ pub struct InstallService {
 
 pub struct InstallServiceInner {
     download_service: DownloadService,
+    installation_service: InstallationService,
     task_service: TaskService<InstallState, InstallProgress, Installation>,
     update_event: Event<InstallUpdateEventArgs>,
     remove_event: Event<InstallRemoveEventArgs>,
-    dir: PathBuf,
 }
 
 pub struct InstallState {
@@ -61,27 +62,6 @@ pub enum InstallProgress {
     Finalizing,
 }
 
-pub struct Installation {
-    pub id: String,
-    pub version: String,
-    pub flavor: String,
-    pub dir: PathBuf,
-}
-
-pub struct InstallationHandle {
-    remove_event: Event<InstallRemoveEventArgs>,
-    id: String,
-    dir: PathBuf,
-    executable: PathBuf,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct InstallationMetadata {
-    pub version: String,
-    pub flavor: String,
-    pub executable: String,
-}
-
 pub struct InstallUpdateEventArgs {
     pub id: String,
     pub version: String,
@@ -96,10 +76,16 @@ pub struct InstallRemoveEventArgs {
 impl InstallService {
     pub fn new(
         download_service: DownloadService,
+        installation_service: InstallationService,
         task_service: TaskService<InstallState, InstallProgress, Installation>,
-        dir: PathBuf,
     ) -> Self {
         let update_event = Event::new();
+        let remove_event = Event::new();
+
+        installation_service
+            .remove_event()
+            .map(InstallRemoveEventArgs::from)
+            .subscribe(remove_event.clone());
 
         task_service
             .update_event()
@@ -109,10 +95,10 @@ impl InstallService {
         Self {
             inner: Arc::new(InstallServiceInner {
                 download_service,
+                installation_service,
                 task_service,
                 update_event,
-                remove_event: Event::new(),
-                dir,
+                remove_event,
             }),
         }
     }
@@ -127,11 +113,7 @@ impl InstallService {
 
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
         let id = format!("{}-{}", version, flavor);
-        let state = InstallState {
-            id: id.clone(),
-            version: version.to_owned(),
-            flavor: flavor.to_owned(),
-        };
+        let state = InstallState::new(&id, version, flavor);
         let task = Task::new(&id, state);
 
         self.inner
@@ -140,8 +122,8 @@ impl InstallService {
                 let download_path = self.download(reporter.clone(), version, flavor).await?;
 
                 reporter.report(InstallProgress::Extracting);
-                let dir = self.inner.dir.join(&id);
-                crate::application::utils::zip::extract(download_path, &dir).await?;
+                let installation = self.inner.installation_service.create(&id, version, flavor);
+                crate::application::utils::zip::extract(download_path, &installation.dir).await?;
 
                 reporter.report(InstallProgress::Finalizing);
                 let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
@@ -150,14 +132,9 @@ impl InstallService {
                     flavor: flavor.to_owned(),
                     executable,
                 };
-                metadata.save(&dir).await?;
 
-                let installation = Installation {
-                    id,
-                    version: metadata.version,
-                    flavor: metadata.flavor,
-                    dir,
-                };
+                metadata.save(&installation.dir).await?;
+
                 Ok(installation)
             })
             .await?;
@@ -168,7 +145,7 @@ impl InstallService {
     pub async fn list(&self) -> Result<Vec<Install>, Error> {
         let mut installs = HashMap::<String, Install>::new();
 
-        let installations = self.list_installations().await?;
+        let installations = self.inner.installation_service.list().await?;
         let tasks = self.inner.task_service.list();
 
         for task in tasks {
@@ -184,18 +161,6 @@ impl InstallService {
         let mut installs = installs.into_values().collect::<Vec<Install>>();
         installs.sort_unstable_by(|a, b| b.id.cmp(&a.id));
         Ok(installs)
-    }
-
-    pub async fn get(&self, id: &str) -> Result<InstallationHandle, Error> {
-        let dir = self.inner.dir.join(id);
-        let metadata = InstallationMetadata::load(&dir).await?;
-        let install = InstallationHandle::new(id, &dir, &metadata.executable);
-
-        install
-            .remove_event()
-            .subscribe(self.inner.remove_event.clone());
-
-        Ok(install)
     }
 
     async fn download(
@@ -220,94 +185,15 @@ impl InstallService {
 
         Ok(handle.path)
     }
-
-    async fn list_installations(&self) -> Result<Vec<Installation>, Error> {
-        let mut installations = Vec::<Installation>::new();
-
-        let mut entries = match tokio::fs::read_dir(&self.inner.dir).await {
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(installations),
-            entries => entries?,
-        };
-
-        while let Some(entry) = entries.next_entry().await? {
-            let file_type = entry.file_type().await?;
-            if !file_type.is_dir() {
-                continue;
-            }
-
-            let id = match entry.file_name().into_string() {
-                Ok(id) => id,
-                Err(_) => continue,
-            };
-
-            let dir = entry.path();
-            let metadata = match InstallationMetadata::load(&dir).await {
-                Ok(metadata) => metadata,
-                Err(_) => continue,
-            };
-
-            let installation = Installation {
-                id,
-                version: metadata.version,
-                flavor: metadata.flavor,
-                dir,
-            };
-            installations.push(installation);
-        }
-
-        Ok(installations)
-    }
 }
 
-impl InstallationHandle {
-    pub fn new(id: &str, dir: &Path, executable: &str) -> Self {
+impl InstallState {
+    pub fn new(id: &str, version: &str, flavor: &str) -> Self {
         Self {
-            remove_event: Event::new(),
             id: id.to_owned(),
-            dir: dir.to_owned(),
-            executable: dir.join(executable),
+            version: version.to_owned(),
+            flavor: flavor.to_owned(),
         }
-    }
-
-    pub fn remove_event(&self) -> &Event<InstallRemoveEventArgs> {
-        &self.remove_event
-    }
-
-    pub async fn launch(&self) -> Result<(), Error> {
-        Command::new(&self.executable).spawn()?;
-        Ok(())
-    }
-
-    pub async fn uninstall(&self) -> Result<(), Error> {
-        tokio::fs::remove_dir_all(&self.dir).await?;
-
-        let args = InstallRemoveEventArgs {
-            id: self.id.clone(),
-        };
-        self.remove_event.invoke(Arc::new(args));
-
-        Ok(())
-    }
-
-    pub async fn reveal(&self) -> Result<(), Error> {
-        tauri_plugin_opener::reveal_item_in_dir(&self.executable)?;
-        Ok(())
-    }
-}
-
-impl InstallationMetadata {
-    pub async fn save(&self, dir: &Path) -> Result<(), Error> {
-        let bytes = serde_json::to_vec(self)?;
-        let path = dir.join("metadata.hub.json");
-        tokio::fs::write(path, bytes).await?;
-        Ok(())
-    }
-
-    pub async fn load(dir: &Path) -> Result<InstallationMetadata, Error> {
-        let path = dir.join("metadata.hub.json");
-        let bytes = tokio::fs::read(path).await?;
-        let metadata = serde_json::from_slice::<InstallationMetadata>(&bytes)?;
-        Ok(metadata)
     }
 }
 
@@ -322,13 +208,17 @@ impl From<Installation> for Install {
     }
 }
 
-impl From<Task<InstallState, InstallProgress, Installation>> for Install {
-    fn from(value: Task<InstallState, InstallProgress, Installation>) -> Self {
+impl<T> From<T> for Install
+where
+    T: Borrow<Task<InstallState, InstallProgress, Installation>>,
+{
+    fn from(value: T) -> Self {
+        let value = value.borrow();
         Install {
             id: value.state.id.clone(),
             flavor: value.state.flavor.clone(),
             version: value.state.version.clone(),
-            status: value.status.into(),
+            status: InstallStatus::from(&value.status),
         }
     }
 }
@@ -358,6 +248,18 @@ where
             version: value.state.version.clone(),
             flavor: value.state.flavor.clone(),
             status: InstallStatus::from(&value.status),
+        }
+    }
+}
+
+impl<I> From<I> for InstallRemoveEventArgs
+where
+    I: Borrow<InstallationRemoveEventArgs>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
+        Self {
+            id: value.id.clone(),
         }
     }
 }
