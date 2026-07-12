@@ -1,3 +1,4 @@
+import { ProgressBar } from "@/components/ProgressBar";
 import {
   launch,
   list,
@@ -118,45 +119,57 @@ const InstallCard = memo(({ install }: { install: Install }) => {
 });
 
 function InstallCardBody({ install }: { install: Install }) {
-  const renderProgress = () => {
+  const getProgress = () => {
     if (install.status.type !== "installing") {
-      return null;
+      return {
+        title: <>In progress...</>,
+        percentage: 0,
+      };
     }
 
     switch (install.status.progress.type) {
       case "starting":
-        return <>Starting...</>;
+        return {
+          text: <>Starting...</>,
+          percentage: 0,
+        };
       case "downloading":
         const { downloaded, size } = install.status.progress.progress;
-        const percentage = size ? (downloaded / size) * 100 : 0;
-        return (
-          <div className="flex flex-col gap-1">
-            <div>Downloading... ({Math.floor(percentage)}%)</div>
-            <div>
-              <div className="rounded-full bg-blue-900">
-                <div
-                  className="h-1 rounded-full bg-blue-500 transition-all duration-400"
-                  style={{
-                    width: `${percentage}%`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        );
+        const percentage = size ? downloaded / size : 0;
+        return {
+          text: <>Downloading... ({Math.floor(percentage * 100)}%)</>,
+          percentage: percentage,
+        };
       case "extracting":
-        return <>Extracting...</>;
+        return {
+          text: <>Extracting...</>,
+          percentage: 1,
+        };
       case "finalizing":
-        return <>Finalizing...</>;
+        return {
+          text: <>Finalizing...</>,
+          percentage: 1,
+        };
       default:
-        return null;
+        return {
+          text: <>In progress...</>,
+          percentage: 0,
+        };
     }
   };
 
   const renderContent = () => {
     switch (install.status.type) {
       case "installing":
-        return <>{renderProgress()}</>;
+        let { text, percentage } = getProgress();
+        return (
+          <div className="flex flex-col gap-1">
+            <div>{text}</div>
+            <div>
+              <ProgressBar value={percentage} />
+            </div>
+          </div>
+        );
       case "installed":
         return <>{install.status.installation.dir}</>;
       case "failed":
