@@ -12,7 +12,7 @@ use tokio_stream::StreamExt;
 
 use crate::application::{
     error::Error,
-    event::{EventAdapter, EventDispatcher, EventRepeater},
+    event::Event,
     services::{
         download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
         task::{Task, TaskReporter, TaskService, TaskStatus, TaskUpdateEventArgs},
@@ -27,8 +27,8 @@ pub struct InstallService {
 pub struct InstallServiceInner {
     download_service: DownloadService,
     task_service: TaskService<InstallState, InstallProgress, Installation>,
-    update_event: EventAdapter<InstallUpdateEventArgs>,
-    remove_event: EventRepeater<InstallRemoveEventArgs>,
+    update_event: Event<InstallUpdateEventArgs>,
+    remove_event: Event<InstallRemoveEventArgs>,
     dir: PathBuf,
 }
 
@@ -69,7 +69,7 @@ pub struct Installation {
 }
 
 pub struct InstallationHandle {
-    remove_event: EventDispatcher<InstallRemoveEventArgs>,
+    remove_event: Event<InstallRemoveEventArgs>,
     id: String,
     dir: PathBuf,
     executable: PathBuf,
@@ -99,23 +99,29 @@ impl InstallService {
         task_service: TaskService<InstallState, InstallProgress, Installation>,
         dir: PathBuf,
     ) -> Self {
-        let update_event = EventAdapter::new(task_service.update_event());
+        let update_event = Event::new();
+
+        task_service
+            .update_event()
+            .map(InstallUpdateEventArgs::from)
+            .subscribe(update_event.clone());
+
         Self {
             inner: Arc::new(InstallServiceInner {
                 download_service,
                 task_service,
                 update_event,
-                remove_event: EventRepeater::new(),
+                remove_event: Event::new(),
                 dir,
             }),
         }
     }
 
-    pub fn update_event(&self) -> &EventAdapter<InstallUpdateEventArgs> {
+    pub fn update_event(&self) -> &Event<InstallUpdateEventArgs> {
         &self.inner.update_event
     }
 
-    pub fn remove_event(&self) -> &EventRepeater<InstallRemoveEventArgs> {
+    pub fn remove_event(&self) -> &Event<InstallRemoveEventArgs> {
         &self.inner.remove_event
     }
 
@@ -184,7 +190,11 @@ impl InstallService {
         let dir = self.inner.dir.join(id);
         let metadata = InstallationMetadata::load(&dir).await?;
         let install = InstallationHandle::new(id, &dir, &metadata.executable);
-        self.inner.remove_event.repeat(install.remove_event());
+
+        install
+            .remove_event()
+            .subscribe(self.inner.remove_event.clone());
+
         Ok(install)
     }
 
@@ -252,14 +262,14 @@ impl InstallService {
 impl InstallationHandle {
     pub fn new(id: &str, dir: &Path, executable: &str) -> Self {
         Self {
-            remove_event: EventDispatcher::new(),
+            remove_event: Event::new(),
             id: id.to_owned(),
             dir: dir.to_owned(),
             executable: dir.join(executable),
         }
     }
 
-    pub fn remove_event(&self) -> &EventDispatcher<InstallRemoveEventArgs> {
+    pub fn remove_event(&self) -> &Event<InstallRemoveEventArgs> {
         &self.remove_event
     }
 

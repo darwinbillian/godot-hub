@@ -1,39 +1,17 @@
 use std::sync::{Arc, Mutex};
 
-pub trait Event<T> {
-    fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<T> + Send + Sync + 'static;
-}
-
 pub trait EventHandler<T> {
     fn invoke(&self, args: Arc<T>);
 }
 
-pub struct EventDispatcher<T> {
-    handlers: Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>,
-}
-
-pub struct EventAdapter<T> {
+pub struct Event<T> {
     handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
 }
 
-pub struct EventAdapterHandler<T> {
-    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
-}
-
-pub struct EventRepeater<T> {
-    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
-}
-
-pub struct EventRepeaterHandler<T> {
-    handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
-}
-
-impl<T> EventDispatcher<T> {
+impl<T> Event<T> {
     pub fn new() -> Self {
         Self {
-            handlers: Mutex::new(Vec::new()),
+            handlers: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -49,99 +27,26 @@ impl<T> EventDispatcher<T> {
         let handlers = self.handlers.lock().unwrap().clone();
         handlers.invoke(args);
     }
-}
 
-impl<T> EventAdapter<T> {
-    pub fn new<E, U>(event: &E) -> Self
+    pub fn map<F, U>(&self, f: F) -> Event<U>
     where
-        E: Event<U>,
-        T: From<Arc<U>> + 'static,
+        F: Fn(Arc<T>) -> U + Send + Sync + 'static,
+        U: 'static,
     {
-        let handlers = Arc::new(Mutex::new(Vec::new()));
+        let event = Event::<U>::new();
 
-        event.subscribe(EventAdapterHandler {
-            handlers: handlers.clone(),
+        self.subscribe({
+            let event = event.clone();
+            move |args| event.invoke(Arc::new(f(args)))
         });
 
-        Self { handlers }
-    }
-
-    pub fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<T> + Send + Sync + 'static,
-    {
-        let mut handlers = self.handlers.lock().unwrap();
-        handlers.push(Arc::new(handler));
+        event
     }
 }
 
-impl<T> EventRepeater<T> {
-    pub fn new() -> Self {
-        Self {
-            handlers: Arc::new(Mutex::new(Vec::new())),
-        }
-    }
-
-    pub fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<T> + Send + Sync + 'static,
-    {
-        let mut handlers = self.handlers.lock().unwrap();
-        handlers.push(Arc::new(handler));
-    }
-
-    pub fn repeat<E>(&self, event: &E)
-    where
-        T: 'static,
-        E: Event<T>,
-    {
-        event.subscribe(EventRepeaterHandler {
-            handlers: self.handlers.clone(),
-        });
-    }
-}
-
-impl<T> Event<T> for EventDispatcher<T> {
-    fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<T> + Send + Sync + 'static,
-    {
-        self.subscribe(handler);
-    }
-}
-
-impl<U> Event<U> for EventAdapter<U> {
-    fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<U> + Send + Sync + 'static,
-    {
-        self.subscribe(handler);
-    }
-}
-
-impl<T, U> EventHandler<T> for EventAdapterHandler<U>
-where
-    U: From<Arc<T>>,
-{
+impl<T> EventHandler<T> for Event<T> {
     fn invoke(&self, args: Arc<T>) {
-        let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(Arc::new(U::from(args)));
-    }
-}
-
-impl<T> Event<T> for EventRepeater<T> {
-    fn subscribe<E>(&self, handler: E)
-    where
-        E: EventHandler<T> + Send + Sync + 'static,
-    {
-        self.subscribe(handler);
-    }
-}
-
-impl<T> EventHandler<T> for EventRepeaterHandler<T> {
-    fn invoke(&self, args: Arc<T>) {
-        let handlers = self.handlers.lock().unwrap().clone();
-        handlers.invoke(args);
+        self.invoke(args);
     }
 }
 
@@ -154,10 +59,21 @@ where
     }
 }
 
-impl<T> EventHandler<T> for Vec<Arc<dyn EventHandler<T> + Send + Sync>> {
+impl<T, E> EventHandler<T> for Vec<E>
+where
+    E: AsRef<dyn EventHandler<T> + Send + Sync>,
+{
     fn invoke(&self, args: Arc<T>) {
         for handler in self {
-            handler.invoke(args.clone())
+            handler.as_ref().invoke(args.clone())
+        }
+    }
+}
+
+impl<T> Clone for Event<T> {
+    fn clone(&self) -> Self {
+        Self {
+            handlers: self.handlers.clone(),
         }
     }
 }

@@ -2,7 +2,7 @@ use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
 use crate::application::{
     error::Error,
-    event::EventAdapter,
+    event::Event,
     services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 
@@ -14,7 +14,7 @@ pub trait VersionProvider {
 pub struct VersionService {
     version_provider: Arc<dyn VersionProvider + Send + Sync>,
     install_service: InstallService,
-    update_event: EventAdapter<VersionUpdateEventArgs>,
+    update_event: Event<VersionUpdateEventArgs>,
 }
 
 pub struct Version {
@@ -48,7 +48,13 @@ impl VersionService {
         version_provider: Arc<dyn VersionProvider + Send + Sync>,
         install_service: InstallService,
     ) -> Self {
-        let update_event = EventAdapter::new(install_service.update_event());
+        let update_event = Event::new();
+
+        install_service
+            .update_event()
+            .map(VersionUpdateEventArgs::from)
+            .subscribe(update_event.clone());
+
         Self {
             version_provider,
             install_service,
@@ -56,7 +62,7 @@ impl VersionService {
         }
     }
 
-    pub fn update_event(&self) -> &EventAdapter<VersionUpdateEventArgs> {
+    pub fn update_event(&self) -> &Event<VersionUpdateEventArgs> {
         &self.update_event
     }
 

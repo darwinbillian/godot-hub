@@ -4,17 +4,14 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::application::{
-    error::Error,
-    event::{EventDispatcher, EventRepeater},
-};
+use crate::application::{error::Error, event::Event};
 
 pub struct TaskService<TState, TProgress, TResult> {
     inner: Arc<TaskServiceInner<TState, TProgress, TResult>>,
 }
 
 pub struct TaskServiceInner<TState, TProgress, TResult> {
-    update_event: EventRepeater<TaskUpdateEventArgs<TState, TProgress, TResult>>,
+    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
     tasks: Mutex<HashMap<String, TaskHandle<TState, TProgress, TResult>>>,
 }
 
@@ -33,7 +30,7 @@ pub struct TaskReporter<TState, TProgress, TResult> {
 }
 
 pub struct TaskHandleInner<TState, TProgress, TResult> {
-    update_event: EventDispatcher<TaskUpdateEventArgs<TState, TProgress, TResult>>,
+    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
     id: String,
     state: Arc<TState>,
     status: Mutex<TaskStatus<TProgress, TResult>>,
@@ -55,13 +52,13 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
     pub fn new() -> Self {
         TaskService {
             inner: Arc::new(TaskServiceInner {
-                update_event: EventRepeater::new(),
+                update_event: Event::new(),
                 tasks: Mutex::new(HashMap::new()),
             }),
         }
     }
 
-    pub fn update_event(&self) -> &EventRepeater<TaskUpdateEventArgs<TState, TProgress, TResult>> {
+    pub fn update_event(&self) -> &Event<TaskUpdateEventArgs<TState, TProgress, TResult>> {
         &self.inner.update_event
     }
 
@@ -75,7 +72,9 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
         let id = task.id.clone();
         let handle = task.into_handle();
 
-        self.inner.update_event.repeat(handle.update_event());
+        handle
+            .update_event()
+            .subscribe(self.inner.update_event.clone());
 
         {
             let mut tasks = self.inner.tasks.lock().unwrap();
@@ -121,7 +120,7 @@ impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
     pub fn into_handle(self) -> TaskHandle<TState, TProgress, TResult> {
         TaskHandle {
             inner: Arc::new(TaskHandleInner {
-                update_event: EventDispatcher::new(),
+                update_event: Event::new(),
                 id: self.id,
                 state: self.state,
                 status: Mutex::new(self.status),
@@ -131,9 +130,7 @@ impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
 }
 
 impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
-    pub fn update_event(
-        &self,
-    ) -> &EventDispatcher<TaskUpdateEventArgs<TState, TProgress, TResult>> {
+    pub fn update_event(&self) -> &Event<TaskUpdateEventArgs<TState, TProgress, TResult>> {
         &self.inner.update_event
     }
 
