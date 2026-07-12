@@ -20,7 +20,9 @@ use crate::{
         providers::{GodotWebsiteDownloadProvider, GodotWebsiteVersionProvider},
     },
     presentation::ipc::features::{
-        install::events::{InstallRemoveEventEmitter, InstallUpdateEventEmitter},
+        install::events::{
+            InstallAddEventEmitter, InstallRemoveEventEmitter, InstallUpdateEventEmitter,
+        },
         version::events::VersionUpdateEventEmitter,
     },
     state::AppState,
@@ -68,6 +70,10 @@ pub fn run() {
             );
 
             let version_service = VersionService::new(version_provider, install_service.clone());
+
+            install_service
+                .add_event()
+                .subscribe(InstallAddEventEmitter::new(app.handle().clone()));
 
             install_service
                 .update_event()

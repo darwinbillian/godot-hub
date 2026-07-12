@@ -2,11 +2,15 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter};
 
-use super::dtos::{InstallRemoveEventArgsDto, InstallUpdateEventArgsDto};
+use super::dtos::{InstallAddEventArgsDto, InstallRemoveEventArgsDto, InstallUpdateEventArgsDto};
 use crate::application::{
     event::EventHandler,
-    services::install::{InstallRemoveEventArgs, InstallUpdateEventArgs},
+    services::install::{InstallAddEventArgs, InstallRemoveEventArgs, InstallUpdateEventArgs},
 };
+
+pub struct InstallAddEventEmitter {
+    app: AppHandle,
+}
 
 pub struct InstallUpdateEventEmitter {
     app: AppHandle,
@@ -14,6 +18,12 @@ pub struct InstallUpdateEventEmitter {
 
 pub struct InstallRemoveEventEmitter {
     app: AppHandle,
+}
+
+impl InstallAddEventEmitter {
+    pub fn new(app: AppHandle) -> Self {
+        Self { app }
+    }
 }
 
 impl InstallUpdateEventEmitter {
@@ -25,6 +35,14 @@ impl InstallUpdateEventEmitter {
 impl InstallRemoveEventEmitter {
     pub fn new(app: AppHandle) -> Self {
         Self { app }
+    }
+}
+
+impl EventHandler<InstallAddEventArgs> for InstallAddEventEmitter {
+    fn invoke(&self, args: Arc<InstallAddEventArgs>) {
+        let _ = self
+            .app
+            .emit("installs::add", &InstallAddEventArgsDto::from(args));
     }
 }
 

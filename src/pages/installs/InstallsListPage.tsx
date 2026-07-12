@@ -4,7 +4,11 @@ import {
   reveal,
   uninstall,
 } from "@/lib/ipc/features/install/commands";
-import { removeEvent, updateEvent } from "@/lib/ipc/features/install/events";
+import {
+  addEvent,
+  removeEvent,
+  updateEvent,
+} from "@/lib/ipc/features/install/events";
 import { Install } from "@/lib/ipc/features/install/types";
 import {
   ChevronDownIcon,
@@ -19,10 +23,20 @@ import { Link } from "react-router";
 export default function InstallsListPage() {
   const [installs, setInstalls] = useState<Install[]>();
 
-  useEffect(() => {
+  const updateInstalls = () => {
     list()
       .then((installs) => setInstalls(installs))
       .catch((e) => console.error(e));
+  };
+
+  useEffect(() => {
+    updateInstalls();
+  }, []);
+
+  useEffect(() => {
+    return addEvent.subscribe(() => {
+      updateInstalls();
+    });
   }, []);
 
   useEffect(() => {

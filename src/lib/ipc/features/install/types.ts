@@ -22,6 +22,8 @@ export interface Installation {
   dir: string;
 }
 
+export interface InstallAddEventArgs {}
+
 export interface InstallUpdateEventArgs {
   id: string;
   status: InstallStatus;

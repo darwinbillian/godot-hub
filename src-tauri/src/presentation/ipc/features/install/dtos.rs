@@ -6,7 +6,8 @@ use crate::{
     application::services::{
         download::DownloadProgress,
         install::{
-            Install, InstallProgress, InstallRemoveEventArgs, InstallStatus, InstallUpdateEventArgs,
+            Install, InstallAddEventArgs, InstallProgress, InstallRemoveEventArgs, InstallStatus,
+            InstallUpdateEventArgs,
         },
         installation::Installation,
     },
@@ -42,6 +43,9 @@ pub enum InstallProgressDto {
 pub struct InstallationDto {
     dir: String,
 }
+
+#[derive(Serialize, Debug)]
+pub struct InstallAddEventArgsDto;
 
 #[derive(Serialize, Debug)]
 pub struct InstallUpdateEventArgsDto {
@@ -117,6 +121,15 @@ where
         Self {
             dir: value.dir.to_string_lossy().into_owned(),
         }
+    }
+}
+
+impl<I> From<I> for InstallAddEventArgsDto
+where
+    I: Borrow<InstallAddEventArgs>,
+{
+    fn from(_value: I) -> Self {
+        Self
     }
 }
 

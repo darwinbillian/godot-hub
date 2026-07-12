@@ -42,6 +42,25 @@ impl<T> Event<T> {
 
         event
     }
+
+    pub fn filter_map<F, U>(&self, f: F) -> Event<U>
+    where
+        F: Fn(Arc<T>) -> Option<U> + Send + Sync + 'static,
+        U: 'static,
+    {
+        let event = Event::<U>::new();
+
+        self.subscribe({
+            let event = event.clone();
+            move |args| {
+                if let Some(args) = f(args) {
+                    event.invoke(Arc::new(args));
+                }
+            }
+        });
+
+        event
+    }
 }
 
 impl<T> EventHandler<T> for Event<T> {

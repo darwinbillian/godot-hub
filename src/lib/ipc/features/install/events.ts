@@ -1,5 +1,21 @@
 import { listen } from "@tauri-apps/api/event";
-import { InstallRemoveEventArgs, InstallUpdateEventArgs } from "./types";
+import {
+  InstallAddEventArgs,
+  InstallRemoveEventArgs,
+  InstallUpdateEventArgs,
+} from "./types";
+
+export const addEvent = {
+  subscribe: (handler: (args: InstallAddEventArgs) => void): (() => void) => {
+    const unlisten = listen<InstallAddEventArgs>("installs::add", (event) => {
+      handler(event.payload);
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  },
+};
 
 export const updateEvent = {
   subscribe: (

@@ -16,7 +16,7 @@ use crate::application::{
         installation::{
             Installation, InstallationMetadata, InstallationRemoveEventArgs, InstallationService,
         },
-        task::{Task, TaskReporter, TaskService, TaskStatus, TaskUpdateEventArgs},
+        task::{Task, TaskReporter, TaskService, TaskStartEventArgs, TaskStatus},
     },
 };
 
@@ -29,6 +29,7 @@ pub struct InstallServiceInner {
     download_service: DownloadService,
     installation_service: InstallationService,
     task_service: TaskService<InstallState, InstallProgress, Installation>,
+    add_event: Event<InstallAddEventArgs>,
     update_event: Event<InstallUpdateEventArgs>,
     remove_event: Event<InstallRemoveEventArgs>,
 }
@@ -62,6 +63,8 @@ pub enum InstallProgress {
     Finalizing,
 }
 
+pub struct InstallAddEventArgs;
+
 pub struct InstallUpdateEventArgs {
     pub id: String,
     pub version: String,
@@ -79,6 +82,7 @@ impl InstallService {
         installation_service: InstallationService,
         task_service: TaskService<InstallState, InstallProgress, Installation>,
     ) -> Self {
+        let add_event = Event::new();
         let update_event = Event::new();
         let remove_event = Event::new();
 
@@ -88,8 +92,31 @@ impl InstallService {
             .subscribe(remove_event.clone());
 
         task_service
+            .start_event()
+            .map(InstallAddEventArgs::from)
+            .subscribe(add_event.clone());
+
+        task_service
             .update_event()
-            .map(InstallUpdateEventArgs::from)
+            .filter_map(|args| {
+                let status = match &args.status {
+                    TaskStatus::Pending => return None,
+                    TaskStatus::Completed(installation) => {
+                        InstallStatus::Installed(installation.clone())
+                    }
+                    TaskStatus::Running(progress) => InstallStatus::Installing(progress.clone()),
+                    TaskStatus::Failed(e) => InstallStatus::Failed(e.clone()),
+                };
+
+                let args = InstallUpdateEventArgs {
+                    id: args.state.id.clone(),
+                    version: args.state.version.clone(),
+                    flavor: args.state.flavor.clone(),
+                    status,
+                };
+
+                Some(args)
+            })
             .subscribe(update_event.clone());
 
         Self {
@@ -97,10 +124,15 @@ impl InstallService {
                 download_service,
                 installation_service,
                 task_service,
+                add_event,
                 update_event,
                 remove_event,
             }),
         }
+    }
+
+    pub fn add_event(&self) -> &Event<InstallAddEventArgs> {
+        &self.inner.add_event
     }
 
     pub fn update_event(&self) -> &Event<InstallUpdateEventArgs> {
@@ -149,7 +181,20 @@ impl InstallService {
         let tasks = self.inner.task_service.list();
 
         for task in tasks {
-            let install = Install::from(task);
+            let status = match task.status {
+                TaskStatus::Pending => continue,
+                TaskStatus::Running(progress) => InstallStatus::Installing(progress),
+                TaskStatus::Completed(_) => continue,
+                TaskStatus::Failed(e) => InstallStatus::Failed(e),
+            };
+
+            let install = Install {
+                id: task.state.id.clone(),
+                version: task.state.version.clone(),
+                flavor: task.state.flavor.clone(),
+                status,
+            };
+
             installs.insert(install.id.clone(), install);
         }
 
@@ -208,47 +253,12 @@ impl From<Installation> for Install {
     }
 }
 
-impl<T> From<T> for Install
+impl<T> From<T> for InstallAddEventArgs
 where
-    T: Borrow<Task<InstallState, InstallProgress, Installation>>,
+    T: Borrow<TaskStartEventArgs>,
 {
-    fn from(value: T) -> Self {
-        let value = value.borrow();
-        Install {
-            id: value.state.id.clone(),
-            flavor: value.state.flavor.clone(),
-            version: value.state.version.clone(),
-            status: InstallStatus::from(&value.status),
-        }
-    }
-}
-
-impl<T> From<T> for InstallStatus
-where
-    T: Borrow<TaskStatus<InstallProgress, Installation>>,
-{
-    fn from(value: T) -> Self {
-        match value.borrow() {
-            TaskStatus::Pending => Self::Installing(Arc::new(InstallProgress::default())),
-            TaskStatus::Running(progress) => Self::Installing(progress.clone()),
-            TaskStatus::Completed(installation) => Self::Installed(installation.clone()),
-            TaskStatus::Failed(e) => Self::Failed(e.clone()),
-        }
-    }
-}
-
-impl<T> From<T> for InstallUpdateEventArgs
-where
-    T: Borrow<TaskUpdateEventArgs<InstallState, InstallProgress, Installation>>,
-{
-    fn from(value: T) -> Self {
-        let value = value.borrow();
-        Self {
-            id: value.state.id.clone(),
-            version: value.state.version.clone(),
-            flavor: value.state.flavor.clone(),
-            status: InstallStatus::from(&value.status),
-        }
+    fn from(_value: T) -> Self {
+        Self
     }
 }
 
