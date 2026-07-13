@@ -1,4 +1,4 @@
-import { ProgressBar } from "@/components/ProgressBar";
+import { Progress } from "@/components/Progress";
 import {
   cancel,
   launch,
@@ -76,7 +76,7 @@ export default function InstallsListPage() {
       </div>
       <div>
         {installs?.length ? (
-          <ul className="list gap-4">
+          <ul className="flex flex-col gap-4">
             {installs.map((install) => (
               <li key={install.id}>
                 <InstallCard install={install} />
@@ -124,7 +124,7 @@ function InstallCardBody({ install }: { install: Install }) {
   const getProgress = () => {
     if (install.status.type !== "installing") {
       return {
-        title: <>In progress...</>,
+        text: <>In progress...</>,
         percentage: 0,
       };
     }
@@ -163,7 +163,7 @@ function InstallCardBody({ install }: { install: Install }) {
   const renderContent = () => {
     switch (install.status.type) {
       case "installing":
-        let { text, percentage } = getProgress();
+        const { text, percentage } = getProgress();
         return (
           <div className="flex flex-col gap-1">
             <div className="flex">
@@ -180,7 +180,7 @@ function InstallCardBody({ install }: { install: Install }) {
               </div>
             </div>
             <div>
-              <ProgressBar value={percentage} />
+              <Progress className="progress" value={percentage} />
             </div>
           </div>
         );

@@ -2,12 +2,11 @@
 
 @layer components {
   .btn {
-    --btn-fg: var(--color-neutral-200);
-
     @apply inline-flex cursor-pointer items-center gap-1 rounded px-2 py-1 font-semibold transition disabled:pointer-events-none;
 
     --btn-bg: var(--btn-color, var(--color-neutral-800));
     --btn-hover-bg: var(--btn-hover-color, var(--color-neutral-700));
+    --btn-fg: var(--color-neutral-200);
     background-color: var(--btn-bg);
     border-color: var(--btn-border);
     color: var(--btn-fg);
@@ -24,9 +23,9 @@
 
     --btn-bg: transparent;
     --btn-hover-bg: color-mix(in oklab, var(--btn-color) 10%, transparent);
-    --btn-fg: var(--btn-color, var(--color-neutral-200));
     --btn-border: var(--btn-color, var(--color-neutral-700));
     --btn-hover-border: var(--btn-hover-color, var(--color-neutral-500));
+    --btn-fg: var(--btn-color, var(--color-neutral-200));
   }
 
   .btn-ghost {
@@ -49,18 +48,14 @@
   }
 
   .btn-disabled {
+    @apply cursor-default;
+
     --btn-color: var(--color-neutral-800);
     --btn-hover-color: var(--color-neutral-800);
-
-    @apply cursor-default;
   }
 
   .card {
     @apply rounded border border-white/10 bg-neutral-800;
-  }
-
-  .list {
-    @apply flex flex-col;
   }
 
   .menu {
@@ -72,6 +67,14 @@
       > * {
         @apply flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition hover:bg-white/10;
       }
+    }
+  }
+
+  .progress {
+    @apply rounded-full bg-blue-900;
+
+    > div {
+      @apply h-1 rounded-full bg-blue-500 transition-all duration-400;
     }
   }
 }

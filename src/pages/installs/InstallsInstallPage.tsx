@@ -40,7 +40,7 @@ export default function InstallsInstallPage() {
         <h1 className="text-2xl font-semibold">Install Godot Editor</h1>
       </div>
       <div>
-        <ul className="list gap-4">
+        <ul className="flex flex-col gap-4">
           {versions?.map((version) => (
             <li key={version.name}>
               <VersionCard version={version} />
