@@ -4,8 +4,8 @@ use tauri::{AppHandle, Emitter};
 
 use super::dtos::{InstallAddEventArgsDto, InstallRemoveEventArgsDto, InstallUpdateEventArgsDto};
 use crate::application::{
-    event::EventHandler,
     services::install::{InstallAddEventArgs, InstallRemoveEventArgs, InstallUpdateEventArgs},
+    utils::event::EventHandler,
 };
 
 pub struct InstallAddEventEmitter {

@@ -10,7 +10,6 @@ use tokio_stream::StreamExt;
 
 use crate::application::{
     error::Error,
-    event::Event,
     services::{
         download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
         installation::{
@@ -18,6 +17,7 @@ use crate::application::{
         },
         task::{Task, TaskController, TaskError, TaskService, TaskStartEventArgs, TaskStatus},
     },
+    utils::event::Event,
 };
 
 #[derive(Clone)]

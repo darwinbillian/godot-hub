@@ -6,7 +6,7 @@ use std::{
 
 use tokio_util::sync::CancellationToken;
 
-use crate::application::{error::Error, event::Event};
+use crate::application::{error::Error, utils::event::Event};
 
 pub trait CancellationTokenExt {
     fn error_if_cancelled(&self) -> Result<(), TaskError>;

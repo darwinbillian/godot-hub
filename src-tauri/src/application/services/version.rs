@@ -2,7 +2,7 @@ use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
 use crate::application::{
     error::Error,
-    event::Event,
+    utils::event::Event,
     services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
 };
 

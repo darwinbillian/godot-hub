@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-use crate::application::{error::Error, event::Event};
+use crate::application::{error::Error, utils::event::Event};
 
 #[derive(Clone)]
 pub struct InstallationService {
