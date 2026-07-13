@@ -2,8 +2,8 @@ use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
 use crate::application::{
     error::Error,
-    utils::event::Event,
     services::install::{Install, InstallService, InstallStatus, InstallUpdateEventArgs},
+    utils::event::Event,
 };
 
 #[async_trait::async_trait]
@@ -103,7 +103,8 @@ where
     I: Borrow<InstallStatus>,
 {
     fn from(value: I) -> Self {
-        match value.borrow() {
+        let value = value.borrow();
+        match value {
             InstallStatus::Installing(_) => Self::Installing,
             InstallStatus::Installed(_) => Self::Installed,
             InstallStatus::Failed(e) => Self::Failed(e.clone()),

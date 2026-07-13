@@ -22,7 +22,7 @@ pub async fn installs_list(state: State<'_, AppState>) -> Result<Vec<InstallDto>
 #[tauri::command(rename = "installs::launch")]
 pub async fn installs_launch(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
     let install = state.installation_service.get(&id).await?;
-    install.launch().await?;
+    install.launch()?;
     Ok(())
 }
 
@@ -36,12 +36,14 @@ pub async fn installs_uninstall(state: State<'_, AppState>, id: String) -> Resul
 #[tauri::command(rename = "installs::reveal")]
 pub async fn installs_reveal(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
     let install = state.installation_service.get(&id).await?;
-    install.reveal().await?;
+    install.reveal()?;
     Ok(())
 }
 
 #[tauri::command(rename = "installs::cancel")]
 pub async fn installs_cancel(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
-    state.install_service.cancel(&id);
+    if let Some(task) = state.install_service.task_service().get(&id) {
+        task.cancel();
+    }
     Ok(())
 }

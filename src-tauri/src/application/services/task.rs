@@ -16,12 +16,6 @@ pub struct TaskService<TState, TProgress, TResult> {
     inner: Arc<TaskServiceInner<TState, TProgress, TResult>>,
 }
 
-pub struct TaskServiceInner<TState, TProgress, TResult> {
-    start_event: Event<TaskStartEventArgs>,
-    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
-    tasks: Mutex<HashMap<String, TaskHandle<TState, TProgress, TResult>>>,
-}
-
 pub struct Task<TState, TProgress, TResult> {
     pub id: String,
     pub state: Arc<TState>,
@@ -30,15 +24,6 @@ pub struct Task<TState, TProgress, TResult> {
 
 pub struct TaskHandle<TState, TProgress, TResult> {
     inner: Arc<TaskHandleInner<TState, TProgress, TResult>>,
-}
-
-pub struct TaskHandleInner<TState, TProgress, TResult> {
-    cancellation_token: CancellationToken,
-    start_event: Event<TaskStartEventArgs>,
-    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
-    id: String,
-    state: Arc<TState>,
-    status: Mutex<TaskStatus<TProgress, TResult>>,
 }
 
 pub struct TaskController<TState, TProgress, TResult> {
@@ -64,6 +49,22 @@ pub struct TaskUpdateEventArgs<TState, TProgress, TResult> {
     pub state: Arc<TState>,
     pub status: TaskStatus<TProgress, TResult>,
 }
+
+struct TaskServiceInner<TState, TProgress, TResult> {
+    start_event: Event<TaskStartEventArgs>,
+    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
+    tasks: Mutex<HashMap<String, TaskHandle<TState, TProgress, TResult>>>,
+}
+
+struct TaskHandleInner<TState, TProgress, TResult> {
+    cancellation_token: CancellationToken,
+    start_event: Event<TaskStartEventArgs>,
+    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
+    id: String,
+    state: Arc<TState>,
+    status: Mutex<TaskStatus<TProgress, TResult>>,
+}
+
 
 impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
     pub fn new() -> Self {
@@ -146,6 +147,10 @@ impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
 }
 
 impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
+    pub fn cancellation_token(&self) -> &CancellationToken {
+        &self.inner.cancellation_token
+    }
+
     pub fn start_event(&self) -> &Event<TaskStartEventArgs> {
         &self.inner.start_event
     }
@@ -204,7 +209,7 @@ impl<TState, TProgress, TResult> TaskController<TState, TProgress, TResult> {
     }
 
     pub fn cancellation_token(&self) -> &CancellationToken {
-        &self.handle.inner.cancellation_token
+        self.handle.cancellation_token()
     }
 
     pub fn report(&self, progress: TProgress) {

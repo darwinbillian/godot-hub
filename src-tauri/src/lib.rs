@@ -57,7 +57,7 @@ pub fn run() {
                 Arc::new(GodotWebsiteDownloadProvider::new(godot_website.clone()));
 
             let download_service =
-                DownloadService::new(download_provider, local_data_dir.join("downloads"));
+                DownloadService::new(download_provider, &local_data_dir.join("downloads"));
 
             let installation_service = InstallationService::new(&local_data_dir.join("installs"));
 

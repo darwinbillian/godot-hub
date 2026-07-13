@@ -13,11 +13,6 @@ pub struct InstallationService {
     inner: Arc<InstallationServiceInner>,
 }
 
-pub struct InstallationServiceInner {
-    remove_event: Event<InstallationRemoveEventArgs>,
-    dir: PathBuf,
-}
-
 pub struct Installation {
     pub id: String,
     pub version: String,
@@ -41,6 +36,11 @@ pub struct InstallationMetadata {
 
 pub struct InstallationRemoveEventArgs {
     pub id: String,
+}
+
+struct InstallationServiceInner {
+    remove_event: Event<InstallationRemoveEventArgs>,
+    dir: PathBuf,
 }
 
 impl InstallationService {
@@ -131,7 +131,7 @@ impl InstallationHandle {
         &self.remove_event
     }
 
-    pub async fn launch(&self) -> Result<(), Error> {
+    pub fn launch(&self) -> Result<(), Error> {
         Command::new(&self.executable).spawn()?;
         Ok(())
     }
@@ -145,7 +145,7 @@ impl InstallationHandle {
         Ok(())
     }
 
-    pub async fn reveal(&self) -> Result<(), Error> {
+    pub fn reveal(&self) -> Result<(), Error> {
         tauri_plugin_opener::reveal_item_in_dir(&self.executable)?;
         Ok(())
     }

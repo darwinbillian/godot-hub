@@ -1,4 +1,8 @@
-use std::{path::PathBuf, pin::Pin, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    pin::Pin,
+    sync::Arc,
+};
 
 use bytes::Bytes;
 use tokio::io::AsyncWriteExt;
@@ -52,10 +56,10 @@ pub enum DownloadStatus {
 }
 
 impl DownloadService {
-    pub fn new(download_provider: Arc<dyn DownloadProvider + Send + Sync>, dir: PathBuf) -> Self {
+    pub fn new(download_provider: Arc<dyn DownloadProvider + Send + Sync>, dir: &Path) -> Self {
         Self {
             download_provider,
-            dir,
+            dir: dir.to_owned(),
         }
     }
 

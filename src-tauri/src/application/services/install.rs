@@ -25,15 +25,6 @@ pub struct InstallService {
     inner: Arc<InstallServiceInner>,
 }
 
-pub struct InstallServiceInner {
-    download_service: DownloadService,
-    installation_service: InstallationService,
-    task_service: TaskService<InstallState, InstallProgress, Installation>,
-    add_event: Event<InstallAddEventArgs>,
-    update_event: Event<InstallUpdateEventArgs>,
-    remove_event: Event<InstallRemoveEventArgs>,
-}
-
 pub struct InstallState {
     pub id: String,
     pub version: String,
@@ -74,6 +65,15 @@ pub struct InstallUpdateEventArgs {
 
 pub struct InstallRemoveEventArgs {
     pub id: String,
+}
+
+struct InstallServiceInner {
+    download_service: DownloadService,
+    installation_service: InstallationService,
+    task_service: TaskService<InstallState, InstallProgress, Installation>,
+    add_event: Event<InstallAddEventArgs>,
+    update_event: Event<InstallUpdateEventArgs>,
+    remove_event: Event<InstallRemoveEventArgs>,
 }
 
 impl InstallService {
@@ -144,6 +144,10 @@ impl InstallService {
         }
     }
 
+    pub fn task_service(&self) -> &TaskService<InstallState, InstallProgress, Installation> {
+        &self.inner.task_service
+    }
+
     pub fn add_event(&self) -> &Event<InstallAddEventArgs> {
         &self.inner.add_event
     }
@@ -163,38 +167,28 @@ impl InstallService {
 
         self.inner
             .task_service
-            .run(
-                task,
-                async |controller| -> Result<Installation, TaskError> {
-                    let download_path = self.download(controller.clone(), version, flavor).await?;
+            .run(task, async |controller| {
+                let download_path = self.download(controller.clone(), version, flavor).await?;
 
-                    controller.report(InstallProgress::Extracting);
-                    let installation = self.inner.installation_service.create(&id, version, flavor);
-                    crate::application::utils::zip::extract(download_path, &installation.dir)
-                        .await?;
+                controller.report(InstallProgress::Extracting);
+                let installation = self.inner.installation_service.create(&id, version, flavor);
+                crate::application::utils::zip::extract(download_path, &installation.dir).await?;
 
-                    controller.report(InstallProgress::Finalizing);
-                    let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
-                    let metadata = InstallationMetadata {
-                        version: version.to_owned(),
-                        flavor: flavor.to_owned(),
-                        executable,
-                    };
+                controller.report(InstallProgress::Finalizing);
+                let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
+                let metadata = InstallationMetadata {
+                    version: version.to_owned(),
+                    flavor: flavor.to_owned(),
+                    executable,
+                };
 
-                    metadata.save(&installation.dir).await?;
+                metadata.save(&installation.dir).await?;
 
-                    Ok(installation)
-                },
-            )
+                Ok(installation)
+            })
             .await?;
 
         Ok(())
-    }
-
-    pub fn cancel(&self, id: &str) {
-        if let Some(task) = self.inner.task_service.get(id) {
-            task.cancel();
-        }
     }
 
     pub async fn list(&self) -> Result<Vec<Install>, Error> {
