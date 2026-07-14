@@ -1,3 +1,4 @@
+import { Menu } from "@/components/Menu";
 import { Progress } from "@/components/Progress";
 import {
   cancel,
@@ -202,7 +203,7 @@ function InstallCardBody({ install }: { install: Install }) {
 }
 
 function InstallCardActions({ install }: { install: Install }) {
-  const [expand, setExpand] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (install.status.type !== "installed") {
     return null;
@@ -222,49 +223,37 @@ function InstallCardActions({ install }: { install: Install }) {
       <button
         className="btn btn-primary rounded-l-none p-1"
         onClick={() => {
-          setExpand((expand) => !expand);
+          setMenuOpen(true);
         }}
       >
         <ChevronDownIcon size={16} />
       </button>
-      {expand && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => {
-              setExpand(false);
-            }}
-          />
-          <div className="absolute top-full right-0 z-10 w-max">
-            <ul className="menu">
-              <li>
-                <button
-                  onClick={() => {
-                    reveal(install.id).catch((e) => console.error(e));
-
-                    setExpand(false);
-                  }}
-                >
-                  <FolderOpenIcon size={16} />
-                  Show in Explorer
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    uninstall(install.id).catch((e) => console.error(e));
-
-                    setExpand(false);
-                  }}
-                >
-                  <Trash2Icon size={16} />
-                  Uninstall
-                </button>
-              </li>
-            </ul>
-          </div>
-        </>
-      )}
+      <Menu open={menuOpen} onClose={() => setMenuOpen(false)}>
+        <ul className="menu absolute top-full right-0 w-max">
+          <li>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                reveal(install.id).catch((e) => console.error(e));
+              }}
+            >
+              <FolderOpenIcon size={16} />
+              Show in Explorer
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => {
+                uninstall(install.id).catch((e) => console.error(e));
+                setMenuOpen(false);
+              }}
+            >
+              <Trash2Icon size={16} />
+              Uninstall
+            </button>
+          </li>
+        </ul>
+      </Menu>
     </div>
   );
 }
