@@ -47,6 +47,11 @@
     --btn-hover-color: var(--color-blue-600);
   }
 
+  .btn-error {
+    --btn-color: var(--color-red-500);
+    --btn-hover-color: var(--color-red-600);
+  }
+
   .btn-disabled {
     @apply cursor-default;
 
@@ -67,6 +72,14 @@
       > * {
         @apply flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition hover:bg-white/10;
       }
+    }
+  }
+
+  .modal {
+    @apply rounded-lg border border-neutral-700 bg-neutral-800;
+
+    > * {
+      @apply border-neutral-700 px-6 py-4;
     }
   }
 

@@ -1,4 +1,5 @@
 import { Menu } from "@/components/Menu";
+import { Modal } from "@/components/Modal";
 import { Progress } from "@/components/Progress";
 import {
   cancel,
@@ -204,6 +205,7 @@ function InstallCardBody({ install }: { install: Install }) {
 
 function InstallCardActions({ install }: { install: Install }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [uninstallModalOpen, setUninstallModalOpen] = useState(false);
 
   if (install.status.type !== "installed") {
     return null;
@@ -244,8 +246,8 @@ function InstallCardActions({ install }: { install: Install }) {
           <li>
             <button
               onClick={() => {
-                uninstall(install.id).catch((e) => console.error(e));
                 setMenuOpen(false);
+                setUninstallModalOpen(true);
               }}
             >
               <Trash2Icon size={16} />
@@ -254,6 +256,53 @@ function InstallCardActions({ install }: { install: Install }) {
           </li>
         </ul>
       </Menu>
+      <Modal
+        open={uninstallModalOpen}
+        onClose={() => {
+          setUninstallModalOpen(false);
+        }}
+      >
+        <div className="modal w-120">
+          <div className="flex items-center border-b">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold">Uninstall Editor</h2>
+            </div>
+            <div>
+              <button
+                className="btn btn-ghost p-1"
+                onClick={() => {
+                  setUninstallModalOpen(false);
+                }}
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+          </div>
+          <div>
+            <p>Are you sure you want to uninstall Godot {install.version}?</p>
+            <p>This action will remove the Editor from your system.</p>
+          </div>
+          <div className="flex justify-end gap-2 border-t">
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setUninstallModalOpen(false);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-error"
+              onClick={() => {
+                setUninstallModalOpen(false);
+                uninstall(install.id).catch((e) => console.error(e));
+              }}
+            >
+              Uninstall
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
