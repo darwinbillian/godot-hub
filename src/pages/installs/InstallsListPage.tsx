@@ -123,6 +123,8 @@ const InstallCard = memo(({ install }: { install: Install }) => {
 });
 
 function InstallCardBody({ install }: { install: Install }) {
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+
   const getProgress = () => {
     if (install.status.type !== "installing") {
       return {
@@ -162,45 +164,89 @@ function InstallCardBody({ install }: { install: Install }) {
     }
   };
 
-  const renderContent = () => {
-    switch (install.status.type) {
-      case "installing":
-        const { text, percentage } = getProgress();
-        return (
-          <div className="flex flex-col gap-1">
-            <div className="flex">
-              <div className="flex-1">{text}</div>
-              <div>
-                <button
-                  className="btn btn-ghost p-1"
-                  onClick={() => {
-                    cancel(install.id).catch((e) => console.error(e));
-                  }}
-                >
-                  <XIcon size={16} />
-                </button>
-              </div>
+  switch (install.status.type) {
+    case "installing":
+      const { text, percentage } = getProgress();
+      return (
+        <div className="flex flex-col gap-1">
+          <div className="flex">
+            <div className="flex-1">
+              <p className="text-sm text-neutral-400">{text}</p>
             </div>
             <div>
-              <Progress className="progress" value={percentage} />
+              <button
+                className="btn btn-ghost p-1"
+                onClick={() => {
+                  setCancelModalOpen(true);
+                }}
+              >
+                <XIcon size={16} />
+              </button>
+              <Modal
+                open={cancelModalOpen}
+                onClose={() => {
+                  setCancelModalOpen(false);
+                }}
+              >
+                <div className="modal w-120">
+                  <div className="flex items-center border-b">
+                    <div className="flex-1">
+                      <h2 className="text-lg font-semibold">
+                        Cancel download?
+                      </h2>
+                    </div>
+                    <div>
+                      <button
+                        className="btn btn-ghost p-1"
+                        onClick={() => {
+                          setCancelModalOpen(false);
+                        }}
+                      >
+                        <XIcon size={20} />
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <p>Godot {install.version}</p>
+                  </div>
+                  <div className="flex justify-end gap-2 border-t">
+                    <button
+                      className="btn btn-error"
+                      onClick={() => {
+                        setCancelModalOpen(false);
+                        cancel(install.id).catch((e) => console.error(e));
+                      }}
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              </Modal>
             </div>
           </div>
-        );
-      case "installed":
-        return <>{install.status.installation.dir}</>;
-      case "failed":
-        return (
-          <details>
+          <div>
+            <Progress className="progress" value={percentage} />
+          </div>
+        </div>
+      );
+    case "installed":
+      return (
+        <p className="text-sm text-neutral-400">
+          {install.status.installation.dir}
+        </p>
+      );
+    case "failed":
+      return (
+        <div className="text-sm text-neutral-400">
+          <details className="text-sm">
             <summary>Failed</summary>
             <p className="text-red-400">{install.status.error.message}</p>
           </details>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return <div className="text-sm text-neutral-400">{renderContent()}</div>;
+        </div>
+      );
+    default:
+      return null;
+  }
 }
 
 function InstallCardActions({ install }: { install: Install }) {

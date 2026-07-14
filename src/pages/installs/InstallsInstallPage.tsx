@@ -91,7 +91,6 @@ function VersionCardActions({ version }: { version: Version }) {
             In progress
           </button>
         );
-
       case "installed":
         return (
           <button className="btn btn-disabled" disabled>
@@ -100,12 +99,17 @@ function VersionCardActions({ version }: { version: Version }) {
         );
       case "failed":
         return (
-          <button
-            className="btn bg-neutral-700 hover:bg-neutral-600"
-            onClick={handleInstall}
-          >
-            Retry
-          </button>
+          <>
+            <div title={version.status.error.message}>
+              <OctagonAlertIcon className="text-red-400" />
+            </div>
+            <button
+              className="btn bg-neutral-700 hover:bg-neutral-600"
+              onClick={handleInstall}
+            >
+              Retry
+            </button>
+          </>
         );
       default:
         return null;
@@ -119,14 +123,9 @@ function VersionCardActions({ version }: { version: Version }) {
         href={version.release_notes}
         target="_blank"
       >
-        <span>Release notes</span>
+        Release notes
         <ExternalLinkIcon size={16} />
       </a>
-      {version.status.type === "failed" && (
-        <div title={version.status.error.message}>
-          <OctagonAlertIcon className="text-red-400" />
-        </div>
-      )}
       {renderButton()}
     </div>
   );
