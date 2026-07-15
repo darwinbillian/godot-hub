@@ -1,5 +1,9 @@
 # Godot Hub
 
+[![GitHub Release](https://img.shields.io/github/v/release/darwinbillian/godot-hub?style=flat-square)](https://github.com/darwinbillian/godot-hub/releases)
+[![GitHub License](https://img.shields.io/github/license/darwinbillian/godot-hub?style=flat-square)](./LICENSE)
+[![GitHub last commit](https://img.shields.io/github/last-commit/darwinbillian/godot-hub?style=flat-square)](https://github.com/darwinbillian/godot-hub/commits/main/)
+
 Godot Hub is a desktop application for managing multiple versions of the [Godot Engine](https://godotengine.org/).
 
 ![Screenshot](./assets/screenshot.png)
@@ -30,3 +34,7 @@ Godot Hub is a desktop application for managing multiple versions of the [Godot 
 - **Install the application:**
 
   Run the installer generated in `src-tauri/target/release/bundle/nsis`.
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](./LICENSE).
