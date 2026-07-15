@@ -79,11 +79,9 @@ function ReleaseCardActions({ release }: { release: Release }) {
           <button
             className="btn btn-primary"
             onClick={() => {
-              install(release.name, release.flavor).catch((e) =>
-                console.error(e),
-              );
-
-              navigate("/installs");
+              install(release.name, release.flavor)
+                .then(() => navigate("/installs"))
+                .catch((e) => console.error(e));
             }}
           >
             Install

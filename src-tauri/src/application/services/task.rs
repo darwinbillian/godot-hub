@@ -1,6 +1,7 @@
 use std::{
     borrow::Borrow,
     collections::HashMap,
+    future::Future,
     sync::{Arc, Mutex},
 };
 
@@ -84,12 +85,13 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
         &self.inner.update_event
     }
 
-    pub async fn run<F>(&self, task: Task<TState, TProgress, TResult>, f: F) -> Result<(), Error>
+    pub fn run<F, Fut>(&self, task: Task<TState, TProgress, TResult>, f: F)
     where
-        TState: 'static,
-        TProgress: Default + 'static,
-        TResult: 'static,
-        F: AsyncFnOnce(TaskController<TState, TProgress, TResult>) -> Result<TResult, TaskError>,
+        TState: Send + Sync + 'static,
+        TProgress: Default + Send + Sync + 'static,
+        TResult: Send + Sync + 'static,
+        F: FnOnce(TaskController<TState, TProgress, TResult>) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<TResult, TaskError>> + Send,
     {
         let handle = task.into_handle();
 
@@ -106,9 +108,9 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
             tasks.insert(handle.id().to_owned(), handle.clone());
         }
 
-        handle.run(f).await;
-
-        Ok(())
+        tokio::task::spawn(async move {
+            handle.run(f).await;
+        });
     }
 
     pub fn list(&self) -> Vec<Task<TState, TProgress, TResult>> {
@@ -179,10 +181,11 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
         self.inner.update_event.invoke(Arc::new(args));
     }
 
-    pub async fn run<F>(&self, f: F)
+    pub async fn run<F, Fut>(&self, f: F)
     where
         TProgress: Default,
-        F: AsyncFnOnce(TaskController<TState, TProgress, TResult>) -> Result<TResult, TaskError>,
+        F: FnOnce(TaskController<TState, TProgress, TResult>) -> Fut,
+        Fut: Future<Output = Result<TResult, TaskError>>,
     {
         let controller = TaskController::new(self.clone());
 

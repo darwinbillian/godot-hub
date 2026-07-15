@@ -140,13 +140,10 @@ impl InstallService {
         let state = InstallerState::from(&installer);
         let task = Task::new(&state.id.clone(), state);
 
-        self.inner
-            .task_service
-            .run(task, async |controller| {
-                let installation = installer.install(&controller).await?;
-                Ok(installation)
-            })
-            .await?;
+        self.inner.task_service.run(task, async move |controller| {
+            let installation = installer.install(&controller).await?;
+            Ok(installation)
+        });
 
         Ok(())
     }
