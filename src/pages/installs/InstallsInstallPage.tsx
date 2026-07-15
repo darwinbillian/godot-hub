@@ -5,6 +5,7 @@ import { Version } from "@/lib/ipc/features/version/types";
 import {
   ArrowLeftIcon,
   ExternalLinkIcon,
+  LoaderCircleIcon,
   OctagonAlertIcon,
 } from "lucide-react";
 import { memo, useEffect, useState } from "react";
@@ -88,6 +89,7 @@ function VersionCardActions({ version }: { version: Version }) {
       case "installing":
         return (
           <button className="btn btn-outline" disabled>
+            <LoaderCircleIcon className="animate-spin" size={16} />
             In progress
           </button>
         );
