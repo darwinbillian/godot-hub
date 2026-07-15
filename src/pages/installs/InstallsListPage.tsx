@@ -3,6 +3,7 @@ import { Modal } from "@/components/Modal";
 import { Progress } from "@/components/Progress";
 import {
   cancel,
+  install,
   launch,
   list,
   reveal,
@@ -16,9 +17,11 @@ import {
 import { Install } from "@/lib/ipc/features/install/types";
 import {
   ChevronDownIcon,
+  ChevronRightIcon,
   FolderOpenIcon,
   HardDriveDownloadIcon,
   PlayIcon,
+  RotateCcwIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
@@ -123,7 +126,7 @@ const InstallCard = memo(({ install }: { install: Install }) => {
 });
 
 function InstallCardBody({ install }: { install: Install }) {
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const getProgress = () => {
     if (install.status.type !== "installing") {
@@ -174,54 +177,7 @@ function InstallCardBody({ install }: { install: Install }) {
               <p className="text-sm text-neutral-400">{text}</p>
             </div>
             <div>
-              <button
-                className="btn btn-ghost p-1"
-                onClick={() => {
-                  setCancelModalOpen(true);
-                }}
-              >
-                <XIcon size={16} />
-              </button>
-              <Modal
-                open={cancelModalOpen}
-                onClose={() => {
-                  setCancelModalOpen(false);
-                }}
-              >
-                <div className="modal w-120">
-                  <div className="flex items-center border-b">
-                    <div className="flex-1">
-                      <h2 className="text-lg font-semibold">
-                        Cancel download?
-                      </h2>
-                    </div>
-                    <div>
-                      <button
-                        className="btn btn-ghost p-1"
-                        onClick={() => {
-                          setCancelModalOpen(false);
-                        }}
-                      >
-                        <XIcon size={20} />
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <p>Godot {install.version}</p>
-                  </div>
-                  <div className="flex justify-end gap-2 border-t">
-                    <button
-                      className="btn btn-error"
-                      onClick={() => {
-                        setCancelModalOpen(false);
-                        cancel(install.id).catch((e) => console.error(e));
-                      }}
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-              </Modal>
+              <CancelButton install={install} />
             </div>
           </div>
           <div>
@@ -237,11 +193,35 @@ function InstallCardBody({ install }: { install: Install }) {
       );
     case "failed":
       return (
-        <div className="text-sm text-neutral-400">
-          <details className="text-sm">
-            <summary>Failed</summary>
-            <p className="text-red-400">{install.status.error.message}</p>
-          </details>
+        <div>
+          <div className="flex items-center">
+            <div className="flex flex-1 flex-col items-stretch">
+              <button
+                className="btn btn-link text-sm"
+                onClick={() => {
+                  setDetailsOpen((prev) => !prev);
+                }}
+              >
+                {detailsOpen ? (
+                  <ChevronDownIcon size={16} />
+                ) : (
+                  <ChevronRightIcon size={16} />
+                )}
+                Failed
+              </button>
+            </div>
+            <div>
+              <RetryButton install={install} />
+              <CancelButton install={install} />
+            </div>
+          </div>
+          {detailsOpen && (
+            <div>
+              <p className="text-sm text-red-400">
+                {install.status.error.message}
+              </p>
+            </div>
+          )}
         </div>
       );
     default:
@@ -276,7 +256,12 @@ function InstallCardActions({ install }: { install: Install }) {
       >
         <ChevronDownIcon size={16} />
       </button>
-      <Menu open={menuOpen} onClose={() => setMenuOpen(false)}>
+      <Menu
+        open={menuOpen}
+        onClose={() => {
+          setMenuOpen(false);
+        }}
+      >
         <ul className="menu absolute top-full right-0 w-max">
           <li>
             <button
@@ -299,25 +284,106 @@ function InstallCardActions({ install }: { install: Install }) {
               <Trash2Icon size={16} />
               Uninstall
             </button>
+            <Modal
+              open={uninstallModalOpen}
+              onClose={() => {
+                setUninstallModalOpen(false);
+              }}
+            >
+              <div className="modal w-120">
+                <div className="flex items-center border-b">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold">Uninstall Editor</h2>
+                  </div>
+                  <div>
+                    <button
+                      className="btn btn-ghost p-1"
+                      onClick={() => {
+                        setUninstallModalOpen(false);
+                      }}
+                    >
+                      <XIcon size={20} />
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p>
+                    Are you sure you want to uninstall Godot {install.version}?
+                  </p>
+                  <p>This action will remove the Editor from your system.</p>
+                </div>
+                <div className="flex justify-end gap-2 border-t">
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => {
+                      setUninstallModalOpen(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-error"
+                    onClick={() => {
+                      setUninstallModalOpen(false);
+                      uninstall(install.id).catch((e) => console.error(e));
+                    }}
+                  >
+                    Uninstall
+                  </button>
+                </div>
+              </div>
+            </Modal>
           </li>
         </ul>
       </Menu>
+    </div>
+  );
+}
+
+function RetryButton({ install: item }: { install: Install }) {
+  return (
+    <button
+      className="btn btn-ghost p-1"
+      title="Retry"
+      onClick={() => {
+        install(item.version, item.flavor).catch((e) => console.error(e));
+      }}
+    >
+      <RotateCcwIcon size={16} />
+    </button>
+  );
+}
+
+function CancelButton({ install }: { install: Install }) {
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        className="btn btn-ghost p-1"
+        title="Cancel"
+        onClick={() => {
+          setCancelModalOpen(true);
+        }}
+      >
+        <XIcon size={16} />
+      </button>
       <Modal
-        open={uninstallModalOpen}
+        open={cancelModalOpen}
         onClose={() => {
-          setUninstallModalOpen(false);
+          setCancelModalOpen(false);
         }}
       >
         <div className="modal w-120">
           <div className="flex items-center border-b">
             <div className="flex-1">
-              <h2 className="text-lg font-semibold">Uninstall Editor</h2>
+              <h2 className="text-lg font-semibold">Cancel download?</h2>
             </div>
             <div>
               <button
                 className="btn btn-ghost p-1"
                 onClick={() => {
-                  setUninstallModalOpen(false);
+                  setCancelModalOpen(false);
                 }}
               >
                 <XIcon size={20} />
@@ -325,30 +391,21 @@ function InstallCardActions({ install }: { install: Install }) {
             </div>
           </div>
           <div>
-            <p>Are you sure you want to uninstall Godot {install.version}?</p>
-            <p>This action will remove the Editor from your system.</p>
+            <p>Godot {install.version}</p>
           </div>
           <div className="flex justify-end gap-2 border-t">
             <button
-              className="btn btn-outline"
-              onClick={() => {
-                setUninstallModalOpen(false);
-              }}
-            >
-              Cancel
-            </button>
-            <button
               className="btn btn-error"
               onClick={() => {
-                setUninstallModalOpen(false);
-                uninstall(install.id).catch((e) => console.error(e));
+                setCancelModalOpen(false);
+                cancel(install.id).catch((e) => console.error(e));
               }}
             >
-              Uninstall
+              Confirm
             </button>
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

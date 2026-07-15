@@ -65,7 +65,6 @@ struct TaskHandleInner<TState, TProgress, TResult> {
     status: Mutex<TaskStatus<TProgress, TResult>>,
 }
 
-
 impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
     pub fn new() -> Self {
         TaskService {
@@ -163,6 +162,11 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
         &self.inner.id
     }
 
+    pub fn status(&self) -> TaskStatus<TProgress, TResult> {
+        let inner = self.inner.status.lock().unwrap();
+        inner.clone()
+    }
+
     pub fn set_status(&self, status: TaskStatus<TProgress, TResult>) {
         let mut inner = self.inner.status.lock().unwrap();
         *inner = status;
@@ -199,7 +203,10 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
     }
 
     pub fn cancel(&self) {
-        self.inner.cancellation_token.cancel();
+        match self.status() {
+            TaskStatus::Failed(_) => self.update_status(TaskStatus::Cancelled),
+            _ => self.inner.cancellation_token.cancel(),
+        }
     }
 }
 

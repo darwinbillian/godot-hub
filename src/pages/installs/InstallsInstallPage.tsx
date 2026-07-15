@@ -72,17 +72,20 @@ const VersionCard = memo(({ version }: { version: Version }) => {
 function VersionCardActions({ version }: { version: Version }) {
   const navigate = useNavigate();
 
-  const handleInstall = () => {
-    install(version.name, version.flavor).catch((e) => console.error(e));
-
-    navigate("/installs");
-  };
-
   const renderButton = () => {
     switch (version.status.type) {
       case "available":
         return (
-          <button className="btn btn-primary" onClick={handleInstall}>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              install(version.name, version.flavor).catch((e) =>
+                console.error(e),
+              );
+
+              navigate("/installs");
+            }}
+          >
             Install
           </button>
         );
@@ -103,14 +106,14 @@ function VersionCardActions({ version }: { version: Version }) {
         return (
           <>
             <div title={version.status.error.message}>
-              <OctagonAlertIcon className="text-red-400" />
+              <OctagonAlertIcon size={20} className="text-red-400" />
             </div>
-            <button
+            <Link
               className="btn bg-neutral-700 hover:bg-neutral-600"
-              onClick={handleInstall}
+              to="/installs"
             >
-              Retry
-            </button>
+              See Details
+            </Link>
           </>
         );
       default:
