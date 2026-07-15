@@ -12,9 +12,7 @@ use crate::application::{
     error::Error,
     services::{
         download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
-        installation::{
-            Installation, InstallationMetadata, InstallationRemoveEventArgs, InstallationService,
-        },
+        installation::{Installation, InstallationRemoveEventArgs, InstallationService},
         task::{Task, TaskController, TaskError, TaskService, TaskStartEventArgs, TaskStatus},
     },
     utils::event::Event,
@@ -168,21 +166,16 @@ impl InstallService {
         self.inner
             .task_service
             .run(task, async |controller| {
+                let transaction = self.inner.installation_service.create(&id, version, flavor);
+
                 let download_path = self.download(controller.clone(), version, flavor).await?;
 
                 controller.report(InstallProgress::Extracting);
-                let installation = self.inner.installation_service.create(&id, version, flavor);
-                crate::application::utils::zip::extract(download_path, &installation.dir).await?;
+                crate::application::utils::zip::extract(download_path, &transaction.dir()).await?;
 
                 controller.report(InstallProgress::Finalizing);
                 let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
-                let metadata = InstallationMetadata {
-                    version: version.to_owned(),
-                    flavor: flavor.to_owned(),
-                    executable,
-                };
-
-                metadata.save(&installation.dir).await?;
+                let installation = transaction.commit(&executable).await?;
 
                 Ok(installation)
             })

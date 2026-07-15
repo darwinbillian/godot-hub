@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,17 +15,25 @@ pub struct InstallationService {
 }
 
 pub struct Installation {
+    pub dir: PathBuf,
     pub id: String,
     pub version: String,
     pub flavor: String,
-    pub dir: PathBuf,
+    pub executable: String,
+}
+
+pub struct InstallationTransaction {
+    dir: PathBuf,
+    id: String,
+    version: String,
+    flavor: String,
 }
 
 pub struct InstallationHandle {
     remove_event: Event<InstallationRemoveEventArgs>,
-    id: String,
     dir: PathBuf,
     executable: PathBuf,
+    id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -57,12 +66,12 @@ impl InstallationService {
         &self.inner.remove_event
     }
 
-    pub fn create(&self, id: &str, version: &str, flavor: &str) -> Installation {
-        Installation {
+    pub fn create(&self, id: &str, version: &str, flavor: &str) -> InstallationTransaction {
+        InstallationTransaction {
+            dir: self.inner.dir.join(id),
             id: id.to_owned(),
             version: version.to_owned(),
             flavor: flavor.to_owned(),
-            dir: self.inner.dir.join(id),
         }
     }
 
@@ -92,10 +101,11 @@ impl InstallationService {
             };
 
             let installation = Installation {
+                dir,
                 id,
                 version: metadata.version,
                 flavor: metadata.flavor,
-                dir,
+                executable: metadata.executable,
             };
 
             installations.push(installation);
@@ -121,9 +131,9 @@ impl InstallationHandle {
     pub fn new(id: &str, dir: &Path, executable: &str) -> Self {
         Self {
             remove_event: Event::new(),
-            id: id.to_owned(),
             dir: dir.to_owned(),
             executable: dir.join(executable),
+            id: id.to_owned(),
         }
     }
 
@@ -151,15 +161,36 @@ impl InstallationHandle {
     }
 }
 
+impl InstallationTransaction {
+    pub fn dir(&self) -> &Path {
+        &self.dir
+    }
+
+    pub async fn commit(self, executable: &str) -> Result<Installation, Error> {
+        let installation = Installation {
+            dir: self.dir,
+            id: self.id,
+            version: self.version,
+            flavor: self.flavor,
+            executable: executable.to_owned(),
+        };
+
+        let metadata = InstallationMetadata::from(&installation);
+        metadata.save(&installation.dir).await?;
+
+        Ok(installation)
+    }
+}
+
 impl InstallationMetadata {
-    pub async fn save(&self, dir: &Path) -> Result<(), Error> {
+    async fn save(&self, dir: &Path) -> Result<(), Error> {
         let bytes = serde_json::to_vec(self)?;
         let path = dir.join("metadata.hub.json");
         tokio::fs::write(path, bytes).await?;
         Ok(())
     }
 
-    pub async fn load(dir: &Path) -> Result<InstallationMetadata, Error> {
+    async fn load(dir: &Path) -> Result<InstallationMetadata, Error> {
         let path = dir.join("metadata.hub.json");
         let bytes = tokio::fs::read(path).await?;
         let metadata = serde_json::from_slice::<InstallationMetadata>(&bytes)?;
@@ -170,5 +201,19 @@ impl InstallationMetadata {
 impl InstallationRemoveEventArgs {
     pub fn new(id: &str) -> Self {
         Self { id: id.to_owned() }
+    }
+}
+
+impl<I> From<I> for InstallationMetadata
+where
+    I: Borrow<Installation>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
+        Self {
+            version: value.version.clone(),
+            flavor: value.flavor.clone(),
+            executable: value.executable.clone(),
+        }
     }
 }
