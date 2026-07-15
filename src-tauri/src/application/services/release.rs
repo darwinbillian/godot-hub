@@ -7,82 +7,82 @@ use crate::application::{
 };
 
 #[async_trait::async_trait]
-pub trait VersionProvider {
-    async fn list_versions(&self) -> Result<Vec<RemoteVersion>, Error>;
+pub trait ReleaseProvider {
+    async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>, Error>;
 }
 
-pub struct VersionService {
-    version_provider: Arc<dyn VersionProvider + Send + Sync>,
+pub struct ReleaseService {
+    release_provider: Arc<dyn ReleaseProvider + Send + Sync>,
     install_service: InstallService,
-    update_event: Event<VersionUpdateEventArgs>,
+    update_event: Event<ReleaseUpdateEventArgs>,
 }
 
-pub struct Version {
+pub struct Release {
     pub name: String,
     pub flavor: String,
     pub release_notes: String,
-    pub status: VersionStatus,
+    pub status: ReleaseStatus,
 }
 
-pub struct RemoteVersion {
+pub struct ReleaseMetadata {
     pub name: String,
     pub flavor: String,
     pub release_notes: String,
 }
 
-pub enum VersionStatus {
+pub enum ReleaseStatus {
     Available,
     Installing,
     Installed,
     Failed(Arc<Error>),
 }
 
-pub struct VersionUpdateEventArgs {
+pub struct ReleaseUpdateEventArgs {
     pub name: String,
     pub flavor: String,
-    pub status: VersionStatus,
+    pub status: ReleaseStatus,
 }
 
-impl VersionService {
+impl ReleaseService {
     pub fn new(
-        version_provider: Arc<dyn VersionProvider + Send + Sync>,
+        release_provider: Arc<dyn ReleaseProvider + Send + Sync>,
         install_service: InstallService,
     ) -> Self {
         let update_event = Event::new();
 
         install_service
             .update_event()
-            .map(VersionUpdateEventArgs::from)
+            .map(ReleaseUpdateEventArgs::from)
             .subscribe(update_event.clone());
 
         Self {
-            version_provider,
+            release_provider,
             install_service,
             update_event,
         }
     }
 
-    pub fn update_event(&self) -> &Event<VersionUpdateEventArgs> {
+    pub fn update_event(&self) -> &Event<ReleaseUpdateEventArgs> {
         &self.update_event
     }
 
-    pub async fn list(&self) -> Result<Vec<Version>, Error> {
-        let versions = self.version_provider.list_versions().await?;
+    pub async fn list(&self) -> Result<Vec<Release>, Error> {
+        let releases = self.release_provider.list_releases().await?;
         let installs = self.list_installs().await?;
-        Ok(versions
+        Ok(releases
             .into_iter()
-            .map(|version| {
-                let key = (version.name.clone(), version.flavor.clone());
+            .map(|release| {
+                let key = (release.name.clone(), release.flavor.clone());
                 let status = if let Some(install) = installs.get(&key) {
-                    VersionStatus::from(&install.status)
+                    ReleaseStatus::from(&install.status)
                 } else {
-                    VersionStatus::Available
+                    ReleaseStatus::Available
                 };
 
-                Version {
-                    name: version.name,
-                    flavor: version.flavor,
-                    release_notes: version.release_notes,
+                Release {
+                    name: release.name,
+                    flavor: release.flavor,
+                    release_notes: release.release_notes,
                     status,
                 }
             })
@@ -98,7 +98,7 @@ impl VersionService {
     }
 }
 
-impl<I> From<I> for VersionStatus
+impl<I> From<I> for ReleaseStatus
 where
     I: Borrow<InstallStatus>,
 {
@@ -112,7 +112,7 @@ where
     }
 }
 
-impl<I> From<I> for VersionUpdateEventArgs
+impl<I> From<I> for ReleaseUpdateEventArgs
 where
     I: Borrow<InstallUpdateEventArgs>,
 {
@@ -121,7 +121,7 @@ where
         Self {
             name: value.version.clone(),
             flavor: value.flavor.clone(),
-            status: VersionStatus::from(&value.status),
+            status: ReleaseStatus::from(&value.status),
         }
     }
 }

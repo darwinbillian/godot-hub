@@ -5,11 +5,11 @@ use crate::application::{
     error::Error,
     services::{
         download::{DownloadProvider, DownloadRequest, DownloadResponse},
-        version::{RemoteVersion, VersionProvider},
+        release::{ReleaseMetadata, ReleaseProvider},
     },
 };
 
-pub struct GodotWebsiteVersionProvider {
+pub struct GodotWebsiteReleaseProvider {
     client: GodotWebsiteClient,
 }
 
@@ -17,7 +17,7 @@ pub struct GodotWebsiteDownloadProvider {
     client: GodotWebsiteClient,
 }
 
-impl GodotWebsiteVersionProvider {
+impl GodotWebsiteReleaseProvider {
     pub fn new(client: GodotWebsiteClient) -> Self {
         Self { client }
     }
@@ -30,13 +30,13 @@ impl GodotWebsiteDownloadProvider {
 }
 
 #[async_trait::async_trait]
-impl VersionProvider for GodotWebsiteVersionProvider {
-    async fn list_versions(&self) -> Result<Vec<RemoteVersion>, Error> {
+impl ReleaseProvider for GodotWebsiteReleaseProvider {
+    async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>, Error> {
         let versions = self.client.list_versions().await?;
         Ok(versions
             .into_iter()
             .filter(|version| version.flavor == "stable")
-            .map(|version| RemoteVersion {
+            .map(|version| ReleaseMetadata {
                 name: version.name,
                 flavor: version.flavor,
                 release_notes: format!(
@@ -50,8 +50,17 @@ impl VersionProvider for GodotWebsiteVersionProvider {
 
 #[async_trait::async_trait]
 impl DownloadProvider for GodotWebsiteDownloadProvider {
-    async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse, Error> {
-        let response = self.client.download(download).await?;
+    async fn download(&self, request: DownloadRequest) -> Result<DownloadResponse, Error> {
+        let response = self
+            .client
+            .download(
+                &request.version,
+                &request.flavor,
+                &request.slug,
+                &request.platform,
+            )
+            .await?;
+
         let size = response.content_length();
         let stream = response.bytes_stream();
 

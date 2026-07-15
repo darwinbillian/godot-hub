@@ -3,21 +3,21 @@ use std::borrow::Borrow;
 use serde::Serialize;
 
 use crate::{
-    application::services::version::{Version, VersionStatus, VersionUpdateEventArgs},
+    application::services::release::{Release, ReleaseStatus, ReleaseUpdateEventArgs},
     presentation::ipc::dtos::ErrorDto,
 };
 
 #[derive(Serialize, Debug)]
-pub struct VersionDto {
+pub struct ReleaseDto {
     name: String,
     flavor: String,
     release_notes: String,
-    status: VersionStatusDto,
+    status: ReleaseStatusDto,
 }
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum VersionStatusDto {
+pub enum ReleaseStatusDto {
     Available,
     Installing,
     Installed,
@@ -25,14 +25,14 @@ pub enum VersionStatusDto {
 }
 
 #[derive(Serialize, Debug)]
-pub struct VersionUpdateEventArgsDto {
+pub struct ReleaseUpdateEventArgsDto {
     name: String,
     flavor: String,
-    status: VersionStatusDto,
+    status: ReleaseStatusDto,
 }
 
-impl From<Version> for VersionDto {
-    fn from(value: Version) -> Self {
+impl From<Release> for ReleaseDto {
+    fn from(value: Release) -> Self {
         Self {
             name: value.name,
             flavor: value.flavor,
@@ -42,33 +42,33 @@ impl From<Version> for VersionDto {
     }
 }
 
-impl<V> From<V> for VersionStatusDto
+impl<V> From<V> for ReleaseStatusDto
 where
-    V: Borrow<VersionStatus>,
+    V: Borrow<ReleaseStatus>,
 {
     fn from(value: V) -> Self {
         let value = value.borrow();
         match value {
-            VersionStatus::Available => Self::Available,
-            VersionStatus::Installing => Self::Installing,
-            VersionStatus::Installed => Self::Installed,
-            VersionStatus::Failed(e) => Self::Failed {
+            ReleaseStatus::Available => Self::Available,
+            ReleaseStatus::Installing => Self::Installing,
+            ReleaseStatus::Installed => Self::Installed,
+            ReleaseStatus::Failed(e) => Self::Failed {
                 error: e.as_ref().into(),
             },
         }
     }
 }
 
-impl<V> From<V> for VersionUpdateEventArgsDto
+impl<V> From<V> for ReleaseUpdateEventArgsDto
 where
-    V: Borrow<VersionUpdateEventArgs>,
+    V: Borrow<ReleaseUpdateEventArgs>,
 {
     fn from(value: V) -> Self {
         let value = value.borrow();
         Self {
             name: value.name.clone(),
             flavor: value.flavor.clone(),
-            status: VersionStatusDto::from(&value.status),
+            status: ReleaseStatusDto::from(&value.status),
         }
     }
 }

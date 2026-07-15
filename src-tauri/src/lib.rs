@@ -13,17 +13,17 @@ use tauri::Manager;
 use crate::{
     application::services::{
         download::DownloadService, install::InstallService, installation::InstallationService,
-        task::TaskService, version::VersionService,
+        release::ReleaseService, task::TaskService,
     },
     infrastructure::godot_website::{
         client::GodotWebsiteClient,
-        providers::{GodotWebsiteDownloadProvider, GodotWebsiteVersionProvider},
+        providers::{GodotWebsiteDownloadProvider, GodotWebsiteReleaseProvider},
     },
     presentation::ipc::features::{
         install::events::{
             InstallAddEventEmitter, InstallRemoveEventEmitter, InstallUpdateEventEmitter,
         },
-        version::events::VersionUpdateEventEmitter,
+        release::events::ReleaseUpdateEventEmitter,
     },
     state::AppState,
 };
@@ -50,8 +50,8 @@ pub fn run() {
 
             let godot_website = GodotWebsiteClient::new(client);
 
-            let version_provider =
-                Arc::new(GodotWebsiteVersionProvider::new(godot_website.clone()));
+            let release_provider =
+                Arc::new(GodotWebsiteReleaseProvider::new(godot_website.clone()));
 
             let download_provider =
                 Arc::new(GodotWebsiteDownloadProvider::new(godot_website.clone()));
@@ -69,7 +69,7 @@ pub fn run() {
                 task_service.clone(),
             );
 
-            let version_service = VersionService::new(version_provider, install_service.clone());
+            let release_service = ReleaseService::new(release_provider, install_service.clone());
 
             install_service
                 .add_event()
@@ -83,14 +83,14 @@ pub fn run() {
                 .remove_event()
                 .subscribe(InstallRemoveEventEmitter::new(app.handle().clone()));
 
-            version_service
+            release_service
                 .update_event()
-                .subscribe(VersionUpdateEventEmitter::new(app.handle().clone()));
+                .subscribe(ReleaseUpdateEventEmitter::new(app.handle().clone()));
 
             let state = AppState {
                 install_service,
                 installation_service,
-                version_service,
+                release_service,
             };
 
             app.manage(state);
@@ -105,7 +105,7 @@ pub fn run() {
             presentation::ipc::features::install::commands::installs_uninstall,
             presentation::ipc::features::install::commands::installs_reveal,
             presentation::ipc::features::install::commands::installs_cancel,
-            presentation::ipc::features::version::commands::versions_list
+            presentation::ipc::features::release::commands::releases_list
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

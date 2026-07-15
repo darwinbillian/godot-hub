@@ -1,9 +1,9 @@
 use crate::application::services::{
-    install::InstallService, installation::InstallationService, version::VersionService,
+    install::InstallService, installation::InstallationService, release::ReleaseService,
 };
 
 pub struct AppState {
     pub install_service: InstallService,
     pub installation_service: InstallationService,
-    pub version_service: VersionService,
+    pub release_service: ReleaseService,
 }

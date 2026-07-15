@@ -1,7 +1,7 @@
 import { install } from "@/lib/ipc/features/install/commands";
-import { list } from "@/lib/ipc/features/version/commands";
-import { updateEvent } from "@/lib/ipc/features/version/events";
-import { Version } from "@/lib/ipc/features/version/types";
+import { list } from "@/lib/ipc/features/release/commands";
+import { updateEvent } from "@/lib/ipc/features/release/events";
+import { Release } from "@/lib/ipc/features/release/types";
 import {
   ArrowLeftIcon,
   ExternalLinkIcon,
@@ -12,21 +12,21 @@ import { memo, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 export default function InstallsInstallPage() {
-  const [versions, setVersions] = useState<Version[]>();
+  const [releases, setReleases] = useState<Release[]>();
 
   useEffect(() => {
     list()
-      .then((versions) => setVersions(versions))
+      .then((releases) => setReleases(releases))
       .catch((e) => console.error(e));
   }, []);
 
   useEffect(() => {
     return updateEvent.subscribe((args) => {
-      setVersions((versions) =>
-        versions?.map((version) =>
-          args.name === version.name && args.flavor === version.flavor
-            ? { ...version, status: args.status }
-            : version,
+      setReleases((releases) =>
+        releases?.map((release) =>
+          args.name === release.name && args.flavor === release.flavor
+            ? { ...release, status: args.status }
+            : release,
         ),
       );
     });
@@ -42,9 +42,9 @@ export default function InstallsInstallPage() {
       </div>
       <div>
         <ul className="flex flex-col gap-4">
-          {versions?.map((version) => (
-            <li key={version.name}>
-              <VersionCard version={version} />
+          {releases?.map((release) => (
+            <li key={release.name}>
+              <ReleaseCard release={release} />
             </li>
           ))}
         </ul>
@@ -53,33 +53,33 @@ export default function InstallsInstallPage() {
   );
 }
 
-const VersionCard = memo(({ version }: { version: Version }) => {
+const ReleaseCard = memo(({ release }: { release: Release }) => {
   return (
     <div className="card flex items-center gap-2 p-4">
       <div>
         <img className="size-8" src="/icon.svg" />
       </div>
       <div className="flex-1">
-        <h2 className="font-semibold">Godot {version.name}</h2>
+        <h2 className="font-semibold">Godot {release.name}</h2>
       </div>
       <div>
-        <VersionCardActions version={version} />
+        <ReleaseCardActions release={release} />
       </div>
     </div>
   );
 });
 
-function VersionCardActions({ version }: { version: Version }) {
+function ReleaseCardActions({ release }: { release: Release }) {
   const navigate = useNavigate();
 
   const renderButton = () => {
-    switch (version.status.type) {
+    switch (release.status.type) {
       case "available":
         return (
           <button
             className="btn btn-primary"
             onClick={() => {
-              install(version.name, version.flavor).catch((e) =>
+              install(release.name, release.flavor).catch((e) =>
                 console.error(e),
               );
 
@@ -105,7 +105,7 @@ function VersionCardActions({ version }: { version: Version }) {
       case "failed":
         return (
           <>
-            <div title={version.status.error.message}>
+            <div title={release.status.error.message}>
               <OctagonAlertIcon size={20} className="text-red-400" />
             </div>
             <Link
@@ -125,7 +125,7 @@ function VersionCardActions({ version }: { version: Version }) {
     <div className="flex items-center gap-2">
       <a
         className="btn btn-link text-sm"
-        href={version.release_notes}
+        href={release.release_notes}
         target="_blank"
       >
         Release notes

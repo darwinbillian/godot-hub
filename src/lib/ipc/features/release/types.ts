@@ -1,18 +1,18 @@
-export interface Version {
+export interface Release {
   name: string;
   flavor: string;
   release_notes: string;
-  status: VersionStatus;
+  status: ReleaseStatus;
 }
 
-export type VersionStatus =
+export type ReleaseStatus =
   | { type: "available" }
   | { type: "installing" }
   | { type: "installed" }
   | { type: "failed"; error: Error };
 
-export interface VersionUpdateEventArgs {
+export interface ReleaseUpdateEventArgs {
   name: string;
   flavor: string;
-  status: VersionStatus;
+  status: ReleaseStatus;
 }

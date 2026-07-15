@@ -1,12 +1,12 @@
 import { listen } from "@tauri-apps/api/event";
-import { VersionUpdateEventArgs } from "./types";
+import { ReleaseUpdateEventArgs } from "./types";
 
 export const updateEvent = {
   subscribe: (
-    handler: (args: VersionUpdateEventArgs) => void,
+    handler: (args: ReleaseUpdateEventArgs) => void,
   ): (() => void) => {
-    const unlisten = listen<VersionUpdateEventArgs>(
-      "versions::update",
+    const unlisten = listen<ReleaseUpdateEventArgs>(
+      "releases::update",
       (event) => {
         handler(event.payload);
       },
