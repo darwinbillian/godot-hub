@@ -15,25 +15,24 @@ Godot Hub is a desktop application for managing multiple versions of the [Godot 
 
 ## Installation
 
-### Build from Source
+Download the [latest](https://github.com/darwinbillian/godot-hub/releases/latest) installer and run it.
 
-- **Install the following dependencies:**
+## Development
 
-  - Node.js
-  - Rust
+Install Node.js and Rust, then run the application:
 
-- **Build the application:**
+```sh
+git clone https://github.com/darwinbillian/godot-hub.git
+cd godot-hub
+npm ci
+npm run tauri dev
+```
 
-  ```sh
-  git clone --depth 1 https://github.com/darwinbillian/godot-hub.git
-  cd godot-hub
-  npm install
-  npm run tauri build
-  ```
+To build the application:
 
-- **Install the application:**
-
-  Run the installer generated in `src-tauri/target/release/bundle/nsis`.
+```sh
+npm run tauri build
+```
 
 ## License
 
