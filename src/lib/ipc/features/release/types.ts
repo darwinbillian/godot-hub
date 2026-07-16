@@ -7,6 +7,7 @@ export interface Release {
 
 export type ReleaseStatus =
   | { type: "available" }
+  | { type: "paused" }
   | { type: "installing" }
   | { type: "installed" }
   | { type: "failed"; error: Error };

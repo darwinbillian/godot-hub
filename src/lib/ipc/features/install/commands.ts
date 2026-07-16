@@ -35,3 +35,15 @@ export function cancel(id: string): Promise<void> {
     id,
   });
 }
+
+export function pause(id: string): Promise<void> {
+  return invoke<void>("installs::pause", {
+    id,
+  });
+}
+
+export function resume(id: string): Promise<void> {
+  return invoke<void>("installs::resume", {
+    id,
+  });
+}

@@ -33,6 +33,7 @@ pub struct ReleaseMetadata {
 pub enum ReleaseStatus {
     Available,
     Installing,
+    Paused,
     Installed,
     Failed(Arc<Error>),
 }
@@ -106,6 +107,7 @@ where
         let value = value.borrow();
         match value {
             InstallStatus::Installing(_) => Self::Installing,
+            InstallStatus::Paused(_) => Self::Paused,
             InstallStatus::Installed(_) => Self::Installed,
             InstallStatus::Failed(e) => Self::Failed(e.clone()),
         }

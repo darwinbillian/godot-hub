@@ -108,6 +108,8 @@ pub fn run() {
             presentation::ipc::features::install::commands::installs_uninstall,
             presentation::ipc::features::install::commands::installs_reveal,
             presentation::ipc::features::install::commands::installs_cancel,
+            presentation::ipc::features::install::commands::installs_pause,
+            presentation::ipc::features::install::commands::installs_resume,
             presentation::ipc::features::release::commands::releases_list
         ])
         .run(tauri::generate_context!())

@@ -25,6 +25,7 @@ pub struct Install {
 #[derive(Clone)]
 pub enum InstallStatus {
     Installing(Arc<InstallerProgress>),
+    Paused(Arc<InstallerProgress>),
     Installed(Arc<Installation>),
     Failed(Arc<Error>),
 }
@@ -76,10 +77,11 @@ impl InstallService {
             .filter_map(|args| {
                 let status = match &args.status {
                     TaskStatus::Pending => return None,
+                    TaskStatus::Running(progress) => InstallStatus::Installing(progress.clone()),
+                    TaskStatus::Paused(progress) => InstallStatus::Paused(progress.clone()),
                     TaskStatus::Completed(installation) => {
                         InstallStatus::Installed(installation.clone())
                     }
-                    TaskStatus::Running(progress) => InstallStatus::Installing(progress.clone()),
                     TaskStatus::Cancelled => return None,
                     TaskStatus::Failed(e) => InstallStatus::Failed(e.clone()),
                 };
@@ -157,6 +159,7 @@ impl InstallService {
         for task in tasks {
             let status = match task.status {
                 TaskStatus::Pending => continue,
+                TaskStatus::Paused(progress) => InstallStatus::Paused(progress),
                 TaskStatus::Running(progress) => InstallStatus::Installing(progress),
                 TaskStatus::Completed(_) => continue,
                 TaskStatus::Cancelled => continue,

@@ -27,6 +27,7 @@ pub struct InstallDto {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InstallStatusDto {
     Installing { progress: InstallerProgressDto },
+    Paused { progress: InstallerProgressDto },
     Installed { installation: InstallationDto },
     Failed { error: ErrorDto },
 }
@@ -84,6 +85,9 @@ where
         let value = value.borrow();
         match value {
             InstallStatus::Installing(progress) => Self::Installing {
+                progress: progress.as_ref().into(),
+            },
+            InstallStatus::Paused(progress) => Self::Paused {
                 progress: progress.as_ref().into(),
             },
             InstallStatus::Installed(installation) => Self::Installed {

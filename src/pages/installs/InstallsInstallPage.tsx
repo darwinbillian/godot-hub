@@ -94,6 +94,13 @@ function ReleaseCardActions({ release }: { release: Release }) {
             In progress
           </button>
         );
+
+      case "paused":
+        return (
+          <button className="btn btn-disabled" disabled>
+            Paused
+          </button>
+        );
       case "installed":
         return (
           <button className="btn btn-disabled" disabled>

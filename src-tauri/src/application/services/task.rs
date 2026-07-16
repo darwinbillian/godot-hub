@@ -9,7 +9,7 @@ use crate::application::{
     error::Error,
     utils::{
         event::Event,
-        sync::{CancellationError, CancellationToken},
+        sync::{CancellationError, CancellationToken, CancellationTokenExt, PauseToken},
     },
 };
 
@@ -34,6 +34,7 @@ pub struct TaskController<TState, TProgress, TResult> {
 pub enum TaskStatus<TProgress, TResult> {
     Pending,
     Running(Arc<TProgress>),
+    Paused(Arc<TProgress>),
     Completed(Arc<TResult>),
     Cancelled,
     Failed(Arc<Error>),
@@ -59,6 +60,7 @@ struct TaskServiceInner<TState, TProgress, TResult> {
 
 struct TaskHandleInner<TState, TProgress, TResult> {
     cancellation_token: CancellationToken,
+    pause_token: PauseToken,
     start_event: Event<TaskStartEventArgs>,
     update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
     id: String,
@@ -137,6 +139,7 @@ impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
         TaskHandle {
             inner: Arc::new(TaskHandleInner {
                 cancellation_token: CancellationToken::new(),
+                pause_token: PauseToken::new(),
                 start_event: Event::new(),
                 update_event: Event::new(),
                 id: self.id,
@@ -150,6 +153,10 @@ impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
 impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
     pub fn cancellation_token(&self) -> &CancellationToken {
         &self.inner.cancellation_token
+    }
+
+    pub fn pause_token(&self) -> &PauseToken {
+        &self.inner.pause_token
     }
 
     pub fn start_event(&self) -> &Event<TaskStartEventArgs> {
@@ -181,6 +188,21 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
         self.inner.update_event.invoke(Arc::new(args));
     }
 
+    pub fn cancel(&self) {
+        match self.status() {
+            TaskStatus::Failed(_) => self.update_status(TaskStatus::Cancelled),
+            _ => self.inner.cancellation_token.cancel(),
+        }
+    }
+
+    pub fn pause(&self) {
+        self.inner.pause_token.pause();
+    }
+
+    pub fn resume(&self) {
+        self.inner.pause_token.resume();
+    }
+
     pub async fn run<F, Fut>(&self, f: F)
     where
         TProgress: Default,
@@ -204,13 +226,6 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
 
         self.update_status(status);
     }
-
-    pub fn cancel(&self) {
-        match self.status() {
-            TaskStatus::Failed(_) => self.update_status(TaskStatus::Cancelled),
-            _ => self.inner.cancellation_token.cancel(),
-        }
-    }
 }
 
 impl<TState, TProgress, TResult> TaskController<TState, TProgress, TResult> {
@@ -225,6 +240,34 @@ impl<TState, TProgress, TResult> TaskController<TState, TProgress, TResult> {
     pub fn report(&self, progress: TProgress) {
         self.handle
             .update_status(TaskStatus::Running(Arc::new(progress)))
+    }
+
+    pub async fn paused(&self) -> Result<(), TaskError> {
+        self.cancellation_token().error_if_cancelled()?;
+
+        if !self.handle.pause_token().is_paused() {
+            return Ok(());
+        }
+
+        if let TaskStatus::Running(progress) = self.handle.status() {
+            self.handle
+                .update_status(TaskStatus::Paused(progress.clone()))
+        }
+
+        tokio::select! {
+            biased;
+            _ = self.handle.cancellation_token().cancelled() => {
+                return Err(TaskError::Cancelled);
+            }
+            _ = self.handle.pause_token().paused() => {}
+        }
+
+        if let TaskStatus::Paused(progress) = self.handle.status() {
+            self.handle
+                .update_status(TaskStatus::Running(progress.clone()))
+        }
+
+        Ok(())
     }
 }
 
@@ -303,6 +346,7 @@ impl<TProgress, TResult> Clone for TaskStatus<TProgress, TResult> {
         match self {
             Self::Pending => Self::Pending,
             Self::Running(progress) => Self::Running(progress.clone()),
+            Self::Paused(progress) => Self::Paused(progress.clone()),
             Self::Completed(result) => Self::Completed(result.clone()),
             Self::Cancelled => Self::Cancelled,
             Self::Failed(e) => Self::Failed(e.clone()),

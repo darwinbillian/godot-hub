@@ -6,6 +6,8 @@ import {
   install,
   launch,
   list,
+  pause,
+  resume,
   reveal,
   uninstall,
 } from "@/lib/ipc/features/install/commands";
@@ -20,6 +22,7 @@ import {
   ChevronRightIcon,
   FolderOpenIcon,
   HardDriveDownloadIcon,
+  PauseIcon,
   PlayIcon,
   RotateCcwIcon,
   Trash2Icon,
@@ -129,7 +132,10 @@ function InstallCardBody({ install }: { install: Install }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const getProgress = () => {
-    if (install.status.type !== "installing") {
+    if (
+      install.status.type !== "installing" &&
+      install.status.type !== "paused"
+    ) {
       return {
         text: <>In progress...</>,
         percentage: 0,
@@ -147,6 +153,7 @@ function InstallCardBody({ install }: { install: Install }) {
         const percentage = size ? downloaded / size : 0;
         return {
           text: <>Downloading... ({Math.floor(percentage * 100)}%)</>,
+          pausedText: <>Download paused ({Math.floor(percentage * 100)}%)</>,
           percentage: percentage,
         };
       case "extracting":
@@ -169,14 +176,38 @@ function InstallCardBody({ install }: { install: Install }) {
 
   switch (install.status.type) {
     case "installing":
-      const { text, percentage } = getProgress();
+    case "paused":
+      const { text, pausedText, percentage } = getProgress();
       return (
         <div className="flex flex-col gap-1">
           <div className="flex">
             <div className="flex-1">
-              <p className="text-sm text-neutral-400">{text}</p>
+              <p className="text-sm text-neutral-400">
+                {install.status.type === "paused"
+                  ? (pausedText ?? "Paused")
+                  : text}
+              </p>
             </div>
             <div>
+              {install.status.type === "paused" ? (
+                <button
+                  className="btn btn-ghost p-1"
+                  onClick={() => {
+                    resume(install.id).catch((e) => console.error(e));
+                  }}
+                >
+                  <PlayIcon size={16} />
+                </button>
+              ) : (
+                <button
+                  className="btn btn-ghost p-1"
+                  onClick={() => {
+                    pause(install.id).catch((e) => console.error(e));
+                  }}
+                >
+                  <PauseIcon size={16} />
+                </button>
+              )}
               <CancelButton install={install} />
             </div>
           </div>

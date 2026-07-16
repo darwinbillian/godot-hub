@@ -47,3 +47,19 @@ pub async fn installs_cancel(state: State<'_, AppState>, id: String) -> Result<(
     }
     Ok(())
 }
+
+#[tauri::command(rename = "installs::pause")]
+pub async fn installs_pause(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
+    if let Some(task) = state.install_service.task_service().get(&id) {
+        task.pause();
+    }
+    Ok(())
+}
+
+#[tauri::command(rename = "installs::resume")]
+pub async fn installs_resume(state: State<'_, AppState>, id: String) -> Result<(), ErrorDto> {
+    if let Some(task) = state.install_service.task_service().get(&id) {
+        task.resume();
+    }
+    Ok(())
+}

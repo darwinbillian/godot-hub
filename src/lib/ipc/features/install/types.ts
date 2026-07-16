@@ -9,6 +9,7 @@ export interface Install {
 
 export type InstallStatus =
   | { type: "installing"; progress: InstallProgress }
+  | { type: "paused"; progress: InstallProgress }
   | { type: "installed"; installation: Installation }
   | { type: "failed"; error: Error };
 

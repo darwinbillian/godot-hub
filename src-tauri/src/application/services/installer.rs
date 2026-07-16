@@ -109,6 +109,8 @@ impl Installer {
                 controller.report(InstallerProgress::Downloading(progress));
                 last_progress = Instant::now();
             }
+
+            controller.paused().await?;
         }
 
         Ok(handle.path)

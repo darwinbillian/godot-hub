@@ -19,6 +19,7 @@ pub struct ReleaseDto {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ReleaseStatusDto {
     Available,
+    Paused,
     Installing,
     Installed,
     Failed { error: ErrorDto },
@@ -50,6 +51,7 @@ where
         let value = value.borrow();
         match value {
             ReleaseStatus::Available => Self::Available,
+            ReleaseStatus::Paused => Self::Paused,
             ReleaseStatus::Installing => Self::Installing,
             ReleaseStatus::Installed => Self::Installed,
             ReleaseStatus::Failed(e) => Self::Failed {
