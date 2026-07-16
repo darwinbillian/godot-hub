@@ -6,10 +6,11 @@ use crate::{
     application::services::{
         download::DownloadProgress,
         install::{
-            Install, InstallAddEventArgs, InstallProgress, InstallRemoveEventArgs, InstallStatus,
+            Install, InstallAddEventArgs, InstallRemoveEventArgs, InstallStatus,
             InstallUpdateEventArgs,
         },
         installation::Installation,
+        installer::InstallerProgress,
     },
     presentation::ipc::dtos::ErrorDto,
 };
@@ -25,23 +26,9 @@ pub struct InstallDto {
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InstallStatusDto {
-    Installing { progress: InstallProgressDto },
+    Installing { progress: InstallerProgressDto },
     Installed { installation: InstallationDto },
     Failed { error: ErrorDto },
-}
-
-#[derive(Serialize, Debug)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum InstallProgressDto {
-    Starting,
-    Downloading { progress: DownloadProgressDto },
-    Extracting,
-    Finalizing,
-}
-
-#[derive(Serialize, Debug)]
-pub struct InstallationDto {
-    dir: String,
 }
 
 #[derive(Serialize, Debug)]
@@ -62,6 +49,20 @@ pub struct InstallRemoveEventArgsDto {
 pub struct DownloadProgressDto {
     downloaded: u64,
     size: Option<u64>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct InstallationDto {
+    dir: String,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InstallerProgressDto {
+    Starting,
+    Downloading { progress: DownloadProgressDto },
+    Extracting,
+    Finalizing,
 }
 
 impl From<Install> for InstallDto {
@@ -91,35 +92,6 @@ where
             InstallStatus::Failed(e) => Self::Failed {
                 error: e.as_ref().into(),
             },
-        }
-    }
-}
-
-impl<I> From<I> for InstallProgressDto
-where
-    I: Borrow<InstallProgress>,
-{
-    fn from(value: I) -> Self {
-        let value = value.borrow();
-        match value {
-            InstallProgress::Starting => Self::Starting,
-            InstallProgress::Downloading(progress) => Self::Downloading {
-                progress: progress.into(),
-            },
-            InstallProgress::Extracting => Self::Extracting,
-            InstallProgress::Finalizing => Self::Finalizing,
-        }
-    }
-}
-
-impl<I> From<I> for InstallationDto
-where
-    I: Borrow<Installation>,
-{
-    fn from(value: I) -> Self {
-        let value = value.borrow();
-        Self {
-            dir: value.dir.to_string_lossy().into_owned(),
         }
     }
 }
@@ -167,6 +139,35 @@ where
         Self {
             downloaded: value.downloaded,
             size: value.size,
+        }
+    }
+}
+
+impl<I> From<I> for InstallationDto
+where
+    I: Borrow<Installation>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
+        Self {
+            dir: value.dir.to_string_lossy().into_owned(),
+        }
+    }
+}
+
+impl<I> From<I> for InstallerProgressDto
+where
+    I: Borrow<InstallerProgress>,
+{
+    fn from(value: I) -> Self {
+        let value = value.borrow();
+        match value {
+            InstallerProgress::Starting => Self::Starting,
+            InstallerProgress::Downloading(progress) => Self::Downloading {
+                progress: progress.into(),
+            },
+            InstallerProgress::Extracting => Self::Extracting,
+            InstallerProgress::Finalizing => Self::Finalizing,
         }
     }
 }

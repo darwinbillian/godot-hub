@@ -13,7 +13,7 @@ use tauri::Manager;
 use crate::{
     application::services::{
         download::DownloadService, install::InstallService, installation::InstallationService,
-        release::ReleaseService, task::TaskService,
+        installer::InstallerService, release::ReleaseService, task::TaskService,
     },
     infrastructure::godot_website::{
         client::GodotWebsiteClient,
@@ -61,12 +61,15 @@ pub fn run() {
 
             let installation_service = InstallationService::new(&local_data_dir.join("installs"));
 
+            let installer_service =
+                InstallerService::new(download_service, installation_service.clone());
+
             let task_service = TaskService::new();
 
             let install_service = InstallService::new(
-                download_service,
                 installation_service.clone(),
-                task_service.clone(),
+                installer_service,
+                task_service,
             );
 
             let release_service = ReleaseService::new(release_provider, install_service.clone());

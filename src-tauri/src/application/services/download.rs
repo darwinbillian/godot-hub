@@ -20,9 +20,9 @@ pub trait DownloadProvider {
     async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse, Error>;
 }
 
+#[derive(Clone)]
 pub struct DownloadService {
-    download_provider: Arc<dyn DownloadProvider + Send + Sync>,
-    dir: PathBuf,
+    inner: Arc<DownloadServiceInner>,
 }
 
 pub struct DownloadRequest {
@@ -55,11 +55,18 @@ pub enum DownloadStatus {
     Completed,
 }
 
+struct DownloadServiceInner {
+    download_provider: Arc<dyn DownloadProvider + Send + Sync>,
+    dir: PathBuf,
+}
+
 impl DownloadService {
     pub fn new(download_provider: Arc<dyn DownloadProvider + Send + Sync>, dir: &Path) -> Self {
         Self {
-            download_provider,
-            dir: dir.to_owned(),
+            inner: Arc::new(DownloadServiceInner {
+                download_provider,
+                dir: dir.to_owned(),
+            }),
         }
     }
 
@@ -72,9 +79,9 @@ impl DownloadService {
             "Godot_v{}-{}_{}",
             request.version, request.flavor, request.slug
         );
-        let path = self.dir.join(&name);
+        let path = self.inner.dir.join(&name);
 
-        let response = self.download_provider.download(request).await?;
+        let response = self.inner.download_provider.download(request).await?;
         let stream = self
             .stream(response, path.clone(), cancellation_token)
             .await?;
@@ -96,7 +103,7 @@ impl DownloadService {
 
         cancellation_token.error_if_cancelled()?;
 
-        tokio::fs::create_dir_all(&self.dir).await?;
+        tokio::fs::create_dir_all(&self.inner.dir).await?;
 
         let temporary_path = path.with_added_extension("part");
         let mut file = FileGuard::create(&temporary_path).await?;

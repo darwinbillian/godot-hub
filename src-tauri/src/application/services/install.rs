@@ -1,19 +1,11 @@
-use std::{
-    borrow::Borrow,
-    collections::HashMap,
-    path::PathBuf,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-
-use tokio_stream::StreamExt;
+use std::{borrow::Borrow, collections::HashMap, sync::Arc};
 
 use crate::application::{
     error::Error,
     services::{
-        download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
         installation::{Installation, InstallationRemoveEventArgs, InstallationService},
-        task::{Task, TaskController, TaskError, TaskService, TaskStartEventArgs, TaskStatus},
+        installer::{InstallerProgress, InstallerService, InstallerState},
+        task::{Task, TaskService, TaskStartEventArgs, TaskStatus},
     },
     utils::event::Event,
 };
@@ -21,12 +13,6 @@ use crate::application::{
 #[derive(Clone)]
 pub struct InstallService {
     inner: Arc<InstallServiceInner>,
-}
-
-pub struct InstallState {
-    pub id: String,
-    pub version: String,
-    pub flavor: String,
 }
 
 pub struct Install {
@@ -38,18 +24,9 @@ pub struct Install {
 
 #[derive(Clone)]
 pub enum InstallStatus {
-    Installing(Arc<InstallProgress>),
+    Installing(Arc<InstallerProgress>),
     Installed(Arc<Installation>),
     Failed(Arc<Error>),
-}
-
-#[derive(Default)]
-pub enum InstallProgress {
-    #[default]
-    Starting,
-    Downloading(DownloadProgress),
-    Extracting,
-    Finalizing,
 }
 
 pub struct InstallAddEventArgs;
@@ -66,9 +43,9 @@ pub struct InstallRemoveEventArgs {
 }
 
 struct InstallServiceInner {
-    download_service: DownloadService,
     installation_service: InstallationService,
-    task_service: TaskService<InstallState, InstallProgress, Installation>,
+    installer_service: InstallerService,
+    task_service: TaskService<InstallerState, InstallerProgress, Installation>,
     add_event: Event<InstallAddEventArgs>,
     update_event: Event<InstallUpdateEventArgs>,
     remove_event: Event<InstallRemoveEventArgs>,
@@ -76,9 +53,9 @@ struct InstallServiceInner {
 
 impl InstallService {
     pub fn new(
-        download_service: DownloadService,
         installation_service: InstallationService,
-        task_service: TaskService<InstallState, InstallProgress, Installation>,
+        installer_service: InstallerService,
+        task_service: TaskService<InstallerState, InstallerProgress, Installation>,
     ) -> Self {
         let add_event = Event::new();
         let update_event = Event::new();
@@ -132,8 +109,8 @@ impl InstallService {
 
         Self {
             inner: Arc::new(InstallServiceInner {
-                download_service,
                 installation_service,
+                installer_service,
                 task_service,
                 add_event,
                 update_event,
@@ -142,7 +119,7 @@ impl InstallService {
         }
     }
 
-    pub fn task_service(&self) -> &TaskService<InstallState, InstallProgress, Installation> {
+    pub fn task_service(&self) -> &TaskService<InstallerState, InstallerProgress, Installation> {
         &self.inner.task_service
     }
 
@@ -159,24 +136,14 @@ impl InstallService {
     }
 
     pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
-        let id = format!("{}-{}", version, flavor);
-        let state = InstallState::new(&id, version, flavor);
-        let task = Task::new(&id, state);
+        let installer = self.inner.installer_service.create(version, flavor);
+        let state = InstallerState::from(&installer);
+        let task = Task::new(&state.id.clone(), state);
 
         self.inner
             .task_service
             .run(task, async |controller| {
-                let transaction = self.inner.installation_service.create(&id, version, flavor);
-
-                let download_path = self.download(controller.clone(), version, flavor).await?;
-
-                controller.report(InstallProgress::Extracting);
-                crate::application::utils::zip::extract(download_path, &transaction.dir()).await?;
-
-                controller.report(InstallProgress::Finalizing);
-                let executable = format!("Godot_v{}-{}_win64.exe", version, flavor);
-                let installation = transaction.commit(&executable).await?;
-
+                let installation = installer.install(&controller).await?;
                 Ok(installation)
             })
             .await?;
@@ -217,43 +184,6 @@ impl InstallService {
         let mut installs = installs.into_values().collect::<Vec<Install>>();
         installs.sort_unstable_by(|a, b| b.id.cmp(&a.id));
         Ok(installs)
-    }
-
-    async fn download(
-        &self,
-        controller: TaskController<InstallState, InstallProgress, Installation>,
-        version: &str,
-        flavor: &str,
-    ) -> Result<PathBuf, TaskError> {
-        let request = DownloadRequest::new(version, flavor, "win64.exe.zip", "windows.64");
-        let mut handle = self
-            .inner
-            .download_service
-            .download(request, controller.cancellation_token().clone())
-            .await?;
-
-        let mut last_progress = Instant::now();
-
-        while let Some(progress) = handle.stream.try_next().await? {
-            if progress.status != DownloadStatus::Downloading
-                || last_progress.elapsed() > Duration::from_millis(500)
-            {
-                controller.report(InstallProgress::Downloading(progress));
-                last_progress = Instant::now();
-            }
-        }
-
-        Ok(handle.path)
-    }
-}
-
-impl InstallState {
-    pub fn new(id: &str, version: &str, flavor: &str) -> Self {
-        Self {
-            id: id.to_owned(),
-            version: version.to_owned(),
-            flavor: flavor.to_owned(),
-        }
     }
 }
 
