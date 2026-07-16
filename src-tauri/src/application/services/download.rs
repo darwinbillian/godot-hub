@@ -7,12 +7,14 @@ use std::{
 use bytes::Bytes;
 use tokio::io::AsyncWriteExt;
 use tokio_stream::{Stream, StreamExt};
-use tokio_util::sync::CancellationToken;
 
 use crate::application::{
     error::Error,
-    services::task::{CancellationTokenExt, TaskError},
-    utils::fs::FileGuard,
+    services::task::TaskError,
+    utils::{
+        fs::FileGuard,
+        sync::{CancellationToken, CancellationTokenExt},
+    },
 };
 
 #[async_trait::async_trait]

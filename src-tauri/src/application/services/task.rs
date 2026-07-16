@@ -5,13 +5,13 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use tokio_util::sync::CancellationToken;
-
-use crate::application::{error::Error, utils::event::Event};
-
-pub trait CancellationTokenExt {
-    fn error_if_cancelled(&self) -> Result<(), TaskError>;
-}
+use crate::application::{
+    error::Error,
+    utils::{
+        event::Event,
+        sync::{CancellationError, CancellationToken},
+    },
+};
 
 pub struct TaskService<TState, TProgress, TResult> {
     inner: Arc<TaskServiceInner<TState, TProgress, TResult>>,
@@ -234,16 +234,6 @@ impl TaskStartEventArgs {
     }
 }
 
-impl CancellationTokenExt for CancellationToken {
-    fn error_if_cancelled(&self) -> Result<(), TaskError> {
-        if self.is_cancelled() {
-            Err(TaskError::Cancelled)
-        } else {
-            Ok(())
-        }
-    }
-}
-
 impl<TState, TProgress, TStatus, T> From<T> for Task<TState, TProgress, TStatus>
 where
     T: Borrow<TaskHandle<TState, TProgress, TStatus>>,
@@ -264,6 +254,12 @@ where
 {
     fn from(value: E) -> Self {
         TaskError::Failed(Into::into(value))
+    }
+}
+
+impl From<CancellationError> for TaskError {
+    fn from(_value: CancellationError) -> Self {
+        TaskError::Cancelled
     }
 }
 
