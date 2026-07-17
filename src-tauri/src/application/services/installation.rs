@@ -32,8 +32,8 @@ pub struct InstallationTransaction {
 pub struct InstallationHandle {
     remove_event: Event<InstallationRemoveEventArgs>,
     dir: PathBuf,
-    executable: PathBuf,
     id: String,
+    executable: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -117,7 +117,7 @@ impl InstallationService {
     pub async fn get(&self, id: &str) -> Result<InstallationHandle, Error> {
         let dir = self.inner.dir.join(id);
         let metadata = InstallationMetadata::load(&dir).await?;
-        let installation = InstallationHandle::new(id, &dir, &metadata.executable);
+        let installation = InstallationHandle::new(&dir, id, &metadata.executable);
 
         installation
             .remove_event()
@@ -128,12 +128,12 @@ impl InstallationService {
 }
 
 impl InstallationHandle {
-    pub fn new(id: &str, dir: &Path, executable: &str) -> Self {
+    pub fn new(dir: &Path, id: &str, executable: &str) -> Self {
         Self {
             remove_event: Event::new(),
             dir: dir.to_owned(),
-            executable: dir.join(executable),
             id: id.to_owned(),
+            executable: executable.to_owned(),
         }
     }
 
@@ -142,7 +142,8 @@ impl InstallationHandle {
     }
 
     pub fn launch(&self) -> Result<(), Error> {
-        Command::new(&self.executable).spawn()?;
+        let executable = self.dir.join(&self.executable);
+        Command::new(executable).spawn()?;
         Ok(())
     }
 
@@ -156,7 +157,8 @@ impl InstallationHandle {
     }
 
     pub fn reveal(&self) -> Result<(), Error> {
-        tauri_plugin_opener::reveal_item_in_dir(&self.executable)?;
+        let executable = self.dir.join(&self.executable);
+        tauri_plugin_opener::reveal_item_in_dir(executable)?;
         Ok(())
     }
 }

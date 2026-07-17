@@ -176,18 +176,6 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
         inner.clone()
     }
 
-    pub fn set_status(&self, status: TaskStatus<TProgress, TResult>) {
-        let mut inner = self.inner.status.lock().unwrap();
-        *inner = status;
-    }
-
-    pub fn update_status(&self, status: TaskStatus<TProgress, TResult>) {
-        self.set_status(status);
-
-        let args = TaskUpdateEventArgs::from(Task::from(self));
-        self.inner.update_event.invoke(Arc::new(args));
-    }
-
     pub fn cancel(&self) {
         match self.status() {
             TaskStatus::Failed(_) => self.update_status(TaskStatus::Cancelled),
@@ -225,6 +213,18 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
         };
 
         self.update_status(status);
+    }
+
+    fn set_status(&self, status: TaskStatus<TProgress, TResult>) {
+        let mut inner = self.inner.status.lock().unwrap();
+        *inner = status;
+    }
+
+    fn update_status(&self, status: TaskStatus<TProgress, TResult>) {
+        self.set_status(status);
+
+        let args = TaskUpdateEventArgs::from(self);
+        self.inner.update_event.invoke(Arc::new(args));
     }
 }
 
@@ -306,10 +306,12 @@ impl From<CancellationError> for TaskError {
     }
 }
 
-impl<TState, TProgress, TResult> From<Task<TState, TProgress, TResult>>
-    for TaskUpdateEventArgs<TState, TProgress, TResult>
+impl<TState, TProgress, TResult, T> From<T> for TaskUpdateEventArgs<TState, TProgress, TResult>
+where
+    T: Into<Task<TState, TProgress, TResult>>,
 {
-    fn from(value: Task<TState, TProgress, TResult>) -> Self {
+    fn from(value: T) -> Self {
+        let value = value.into();
         Self {
             state: value.state,
             status: value.status,

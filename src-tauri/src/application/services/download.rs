@@ -81,12 +81,13 @@ impl DownloadService {
             "Godot_v{}-{}_{}",
             request.version, request.flavor, request.slug
         );
-        let path = self.inner.dir.join(&name);
 
         let response = self.inner.download_provider.download(request).await?;
+        let path = self.inner.dir.join(&name);
         let stream = self
             .stream(response, path.clone(), cancellation_token)
             .await?;
+
         let handle = DownloadHandle {
             stream: Box::pin(stream),
             path,
@@ -130,6 +131,7 @@ impl DownloadService {
 
                 file.write_all(&chunk).await?;
                 downloaded += chunk.len() as u64;
+
                 yield DownloadProgress { downloaded, size, status: DownloadStatus::Downloading };
             }
 
