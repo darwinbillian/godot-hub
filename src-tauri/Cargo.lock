@@ -1582,7 +1582,7 @@ dependencies = [
 
 [[package]]
 name = "godot-hub"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "async-stream",
  "async-trait",
