@@ -1,4 +1,4 @@
-import { install } from "@/lib/ipc/features/install/commands";
+import { install, resume } from "@/lib/ipc/features/install/commands";
 import {
   addEvent,
   removeEvent,
@@ -11,6 +11,7 @@ import {
   ExternalLinkIcon,
   LoaderCircleIcon,
   OctagonAlertIcon,
+  PlayIcon,
 } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -118,9 +119,18 @@ function ReleaseCardActions({ release }: { release: Release }) {
             </button>
           );
         case "paused":
+          const id = release.install.id;
           return (
-            <button className="btn btn-disabled" disabled>
-              Paused
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                resume(id)
+                  .then(() => navigate("/installs"))
+                  .catch((e) => console.error(e));
+              }}
+            >
+              <PlayIcon size={16} />
+              Resume download
             </button>
           );
         case "installed":
