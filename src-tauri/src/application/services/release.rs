@@ -1,13 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
-use crate::application::{
-    error::Error,
-    services::install::{Install, InstallService},
-};
+use anyhow::Result;
+
+use crate::application::services::install::{Install, InstallService};
 
 #[async_trait::async_trait]
 pub trait ReleaseProvider {
-    async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>, Error>;
+    async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>>;
 }
 
 pub struct ReleaseService {
@@ -44,7 +43,7 @@ impl ReleaseService {
         }
     }
 
-    pub async fn list(&self) -> Result<Vec<Release>, Error> {
+    pub async fn list(&self) -> Result<Vec<Release>> {
         let releases = self.release_provider.list_releases().await?;
         let installs = self.list_installs().await?;
         Ok(releases
@@ -62,7 +61,7 @@ impl ReleaseService {
             .collect())
     }
 
-    async fn list_installs(&self) -> Result<HashMap<(String, String), Install>, Error> {
+    async fn list_installs(&self) -> Result<HashMap<(String, String), Install>> {
         let installs = self.install_service.list().await?;
         Ok(installs
             .into_iter()

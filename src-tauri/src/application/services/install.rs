@@ -1,7 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::{Error, Result};
+
 use crate::application::{
-    error::Error,
     services::{
         installation::{Installation, InstallationService},
         installer::{InstallerProgress, InstallerService, InstallerState},
@@ -129,7 +130,7 @@ impl InstallService {
         &self.inner.remove_event
     }
 
-    pub async fn install(&self, version: &str, flavor: &str) -> Result<(), Error> {
+    pub async fn install(&self, version: &str, flavor: &str) -> Result<()> {
         let installer = self.inner.installer_service.create(version, flavor);
         let state = InstallerState::from(&installer);
         let task = Task::new(&state.id.clone(), state);
@@ -142,7 +143,7 @@ impl InstallService {
         Ok(())
     }
 
-    pub async fn list(&self) -> Result<Vec<Install>, Error> {
+    pub async fn list(&self) -> Result<Vec<Install>> {
         let mut installs = HashMap::<String, Install>::new();
 
         let installations = self.inner.installation_service.list().await?;

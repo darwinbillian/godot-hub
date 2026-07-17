@@ -1,12 +1,10 @@
+use anyhow::{Error, Result};
 use tokio_stream::StreamExt;
 
 use super::client::GodotWebsiteClient;
-use crate::application::{
-    error::Error,
-    services::{
-        download::{DownloadProvider, DownloadRequest, DownloadResponse},
-        release::{ReleaseMetadata, ReleaseProvider},
-    },
+use crate::application::services::{
+    download::{DownloadProvider, DownloadRequest, DownloadResponse},
+    release::{ReleaseMetadata, ReleaseProvider},
 };
 
 pub struct GodotWebsiteReleaseProvider {
@@ -31,7 +29,7 @@ impl GodotWebsiteDownloadProvider {
 
 #[async_trait::async_trait]
 impl ReleaseProvider for GodotWebsiteReleaseProvider {
-    async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>, Error> {
+    async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>> {
         let versions = self.client.list_versions().await?;
         Ok(versions
             .into_iter()
@@ -50,7 +48,7 @@ impl ReleaseProvider for GodotWebsiteReleaseProvider {
 
 #[async_trait::async_trait]
 impl DownloadProvider for GodotWebsiteDownloadProvider {
-    async fn download(&self, request: DownloadRequest) -> Result<DownloadResponse, Error> {
+    async fn download(&self, request: DownloadRequest) -> Result<DownloadResponse> {
         let response = self
             .client
             .download(

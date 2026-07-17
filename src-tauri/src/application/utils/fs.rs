@@ -3,9 +3,8 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::Result;
 use tokio::fs::File;
-
-use crate::application::error::Error;
 
 pub struct FileGuard {
     file: Option<File>,
@@ -13,7 +12,7 @@ pub struct FileGuard {
 }
 
 impl FileGuard {
-    pub async fn create<P>(path: P) -> Result<Self, Error>
+    pub async fn create<P>(path: P) -> Result<Self>
     where
         P: Into<PathBuf>,
     {

@@ -5,12 +5,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::application::{
-    error::Error,
-    utils::{
-        event::Event,
-        sync::{CancellationError, CancellationToken, CancellationTokenExt, PauseToken},
-    },
+use anyhow::{Error, Result};
+
+use crate::application::utils::{
+    event::Event,
+    sync::{CancellationError, CancellationToken, CancellationTokenExt, PauseToken},
 };
 
 pub struct TaskService<TState, TProgress, TResult> {

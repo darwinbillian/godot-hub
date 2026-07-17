@@ -1,8 +1,7 @@
 use std::borrow::Borrow;
 
+use anyhow::Error;
 use serde::Serialize;
-
-use crate::application::error::Error;
 
 #[derive(Serialize, Debug)]
 pub struct ErrorDto {

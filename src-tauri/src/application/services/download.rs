@@ -4,12 +4,12 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::Result;
 use bytes::Bytes;
 use tokio::io::AsyncWriteExt;
 use tokio_stream::{Stream, StreamExt};
 
 use crate::application::{
-    error::Error,
     services::task::TaskError,
     utils::{
         fs::FileGuard,
@@ -19,7 +19,7 @@ use crate::application::{
 
 #[async_trait::async_trait]
 pub trait DownloadProvider {
-    async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse, Error>;
+    async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse>;
 }
 
 #[derive(Clone)]
@@ -35,7 +35,7 @@ pub struct DownloadRequest {
 }
 
 pub struct DownloadResponse {
-    pub stream: Pin<Box<dyn Stream<Item = Result<Bytes, Error>> + Send>>,
+    pub stream: Pin<Box<dyn Stream<Item = Result<Bytes>> + Send>>,
     pub size: Option<u64>,
 }
 

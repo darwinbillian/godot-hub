@@ -4,10 +4,11 @@ use std::{
     sync::Arc,
 };
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-use crate::application::{error::Error, utils::event::Event};
+use crate::application::utils::event::Event;
 
 #[derive(Clone)]
 pub struct InstallationService {
@@ -75,7 +76,7 @@ impl InstallationService {
         }
     }
 
-    pub async fn list(&self) -> Result<Vec<Installation>, Error> {
+    pub async fn list(&self) -> Result<Vec<Installation>> {
         let mut installations = Vec::<Installation>::new();
 
         let mut entries = match tokio::fs::read_dir(&self.inner.dir).await {
@@ -114,7 +115,7 @@ impl InstallationService {
         Ok(installations)
     }
 
-    pub async fn get(&self, id: &str) -> Result<InstallationHandle, Error> {
+    pub async fn get(&self, id: &str) -> Result<InstallationHandle> {
         let dir = self.inner.dir.join(id);
         let metadata = InstallationMetadata::load(&dir).await?;
         let installation = InstallationHandle::new(&dir, id, &metadata.executable);
@@ -141,13 +142,13 @@ impl InstallationHandle {
         &self.remove_event
     }
 
-    pub fn launch(&self) -> Result<(), Error> {
+    pub fn launch(&self) -> Result<()> {
         let executable = self.dir.join(&self.executable);
         Command::new(executable).spawn()?;
         Ok(())
     }
 
-    pub async fn uninstall(&self) -> Result<(), Error> {
+    pub async fn uninstall(&self) -> Result<()> {
         tokio::fs::remove_dir_all(&self.dir).await?;
 
         let args = InstallationRemoveEventArgs::new(&self.id);
@@ -156,7 +157,7 @@ impl InstallationHandle {
         Ok(())
     }
 
-    pub fn reveal(&self) -> Result<(), Error> {
+    pub fn reveal(&self) -> Result<()> {
         let executable = self.dir.join(&self.executable);
         tauri_plugin_opener::reveal_item_in_dir(executable)?;
         Ok(())
@@ -168,7 +169,7 @@ impl InstallationTransaction {
         &self.dir
     }
 
-    pub async fn commit(self, executable: &str) -> Result<Installation, Error> {
+    pub async fn commit(self, executable: &str) -> Result<Installation> {
         let installation = Installation {
             dir: self.dir,
             id: self.id,
@@ -185,14 +186,14 @@ impl InstallationTransaction {
 }
 
 impl InstallationMetadata {
-    async fn save(&self, dir: &Path) -> Result<(), Error> {
+    async fn save(&self, dir: &Path) -> Result<()> {
         let bytes = serde_json::to_vec(self)?;
         let path = dir.join("metadata.hub.json");
         tokio::fs::write(path, bytes).await?;
         Ok(())
     }
 
-    async fn load(dir: &Path) -> Result<InstallationMetadata, Error> {
+    async fn load(dir: &Path) -> Result<InstallationMetadata> {
         let path = dir.join("metadata.hub.json");
         let bytes = tokio::fs::read(path).await?;
         let metadata = serde_json::from_slice::<InstallationMetadata>(&bytes)?;

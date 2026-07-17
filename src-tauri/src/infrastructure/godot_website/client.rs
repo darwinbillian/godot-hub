@@ -1,9 +1,9 @@
+use anyhow::Result;
 use http_cache_reqwest::CacheMode;
 use reqwest::Response;
 use reqwest_middleware::ClientWithMiddleware;
 
 use super::dtos::VersionDto;
-use crate::application::error::Error;
 
 #[derive(Clone)]
 pub struct GodotWebsiteClient {
@@ -15,7 +15,7 @@ impl GodotWebsiteClient {
         Self { client }
     }
 
-    pub async fn list_versions(&self) -> Result<Vec<VersionDto>, Error> {
+    pub async fn list_versions(&self) -> Result<Vec<VersionDto>> {
         let request = self.client.get(
             "https://raw.githubusercontent.com/godotengine/godot-website/master/_data/versions.yml",
         );
@@ -31,7 +31,7 @@ impl GodotWebsiteClient {
         flavor: &str,
         slug: &str,
         platform: &str,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response> {
         let url = format!(
             "https://downloads.godotengine.org/?version={}&flavor={}&slug={}&platform={}",
             version, flavor, slug, platform

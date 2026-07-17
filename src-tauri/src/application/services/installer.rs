@@ -5,15 +5,13 @@ use std::{
     time::{Duration, Instant},
 };
 
+use anyhow::Result;
 use tokio_stream::StreamExt;
 
-use crate::application::{
-    error::Error,
-    services::{
-        download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
-        installation::{Installation, InstallationService, InstallationTransaction},
-        task::{TaskController, TaskError},
-    },
+use crate::application::services::{
+    download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
+    installation::{Installation, InstallationService, InstallationTransaction},
+    task::{TaskController, TaskError},
 };
 
 pub struct InstallerService {
@@ -121,7 +119,7 @@ impl Installer {
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
         transaction: &InstallationTransaction,
         download_path: &Path,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         controller.report(InstallerProgress::Extracting);
         crate::application::utils::zip::extract(download_path, &transaction.dir()).await?;
         Ok(())
@@ -131,7 +129,7 @@ impl Installer {
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
         transaction: InstallationTransaction,
-    ) -> Result<Installation, Error> {
+    ) -> Result<Installation> {
         controller.report(InstallerProgress::Finalizing);
         let executable = format!("Godot_v{}-{}_win64.exe", self.version, self.flavor);
         let installation = transaction.commit(&executable).await?;
