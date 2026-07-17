@@ -3,8 +3,8 @@ use std::borrow::Borrow;
 use serde::Serialize;
 
 use crate::{
-    application::services::release::{Release, ReleaseStatus, ReleaseUpdateEventArgs},
-    presentation::ipc::dtos::ErrorDto,
+    application::services::release::{Release, ReleaseStatus},
+    presentation::ipc::features::install::dtos::InstallDto,
 };
 
 #[derive(Serialize, Debug)]
@@ -13,23 +13,13 @@ pub struct ReleaseDto {
     flavor: String,
     release_notes: String,
     status: ReleaseStatusDto,
+    install: Option<InstallDto>,
 }
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ReleaseStatusDto {
     Available,
-    Paused,
-    Installing,
-    Installed,
-    Failed { error: ErrorDto },
-}
-
-#[derive(Serialize, Debug)]
-pub struct ReleaseUpdateEventArgsDto {
-    name: String,
-    flavor: String,
-    status: ReleaseStatusDto,
 }
 
 impl From<Release> for ReleaseDto {
@@ -39,38 +29,19 @@ impl From<Release> for ReleaseDto {
             flavor: value.flavor,
             release_notes: value.release_notes,
             status: value.status.into(),
+            install: value.install.map(InstallDto::from),
         }
     }
 }
 
-impl<V> From<V> for ReleaseStatusDto
+impl<R> From<R> for ReleaseStatusDto
 where
-    V: Borrow<ReleaseStatus>,
+    R: Borrow<ReleaseStatus>,
 {
-    fn from(value: V) -> Self {
+    fn from(value: R) -> Self {
         let value = value.borrow();
         match value {
             ReleaseStatus::Available => Self::Available,
-            ReleaseStatus::Paused => Self::Paused,
-            ReleaseStatus::Installing => Self::Installing,
-            ReleaseStatus::Installed => Self::Installed,
-            ReleaseStatus::Failed(e) => Self::Failed {
-                error: e.as_ref().into(),
-            },
-        }
-    }
-}
-
-impl<V> From<V> for ReleaseUpdateEventArgsDto
-where
-    V: Borrow<ReleaseUpdateEventArgs>,
-{
-    fn from(value: V) -> Self {
-        let value = value.borrow();
-        Self {
-            name: value.name.clone(),
-            flavor: value.flavor.clone(),
-            status: ReleaseStatusDto::from(&value.status),
         }
     }
 }

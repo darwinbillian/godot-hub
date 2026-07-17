@@ -1,6 +1,10 @@
 import { install } from "@/lib/ipc/features/install/commands";
+import {
+  addEvent,
+  removeEvent,
+  updateEvent,
+} from "@/lib/ipc/features/install/events";
 import { list } from "@/lib/ipc/features/release/commands";
-import { updateEvent } from "@/lib/ipc/features/release/events";
 import { Release } from "@/lib/ipc/features/release/types";
 import {
   ArrowLeftIcon,
@@ -14,18 +18,49 @@ import { Link, useNavigate } from "react-router";
 export default function InstallsInstallPage() {
   const [releases, setReleases] = useState<Release[]>();
 
-  useEffect(() => {
+  const updateReleases = () => {
     list()
       .then((releases) => setReleases(releases))
       .catch((e) => console.error(e));
+  };
+
+  useEffect(() => {
+    updateReleases();
+  }, []);
+
+  useEffect(() => {
+    return addEvent.subscribe(() => {
+      updateReleases();
+    });
   }, []);
 
   useEffect(() => {
     return updateEvent.subscribe((args) => {
       setReleases((releases) =>
         releases?.map((release) =>
-          args.name === release.name && args.flavor === release.flavor
-            ? { ...release, status: args.status }
+          args.id === release.install?.id
+            ? {
+                ...release,
+                install: {
+                  ...release.install,
+                  status: args.status,
+                },
+              }
+            : release,
+        ),
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    return removeEvent.subscribe((args) => {
+      setReleases((releases) =>
+        releases?.map((release) =>
+          args.id === release.install?.id
+            ? {
+                ...release,
+                install: undefined,
+              }
             : release,
         ),
       );
@@ -73,56 +108,62 @@ function ReleaseCardActions({ release }: { release: Release }) {
   const navigate = useNavigate();
 
   const renderButton = () => {
-    switch (release.status.type) {
-      case "available":
-        return (
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              install(release.name, release.flavor)
-                .then(() => navigate("/installs"))
-                .catch((e) => console.error(e));
-            }}
-          >
-            Install
-          </button>
-        );
-      case "installing":
-        return (
-          <button className="btn btn-outline" disabled>
-            <LoaderCircleIcon className="animate-spin" size={16} />
-            In progress
-          </button>
-        );
-
-      case "paused":
-        return (
-          <button className="btn btn-disabled" disabled>
-            Paused
-          </button>
-        );
-      case "installed":
-        return (
-          <button className="btn btn-disabled" disabled>
-            Installed
-          </button>
-        );
-      case "failed":
-        return (
-          <>
-            <div title={release.status.error.message}>
-              <OctagonAlertIcon size={20} className="text-red-400" />
-            </div>
-            <Link
-              className="btn bg-neutral-700 hover:bg-neutral-600"
-              to="/installs"
+    if (release.install) {
+      switch (release.install.status.type) {
+        case "installing":
+          return (
+            <button className="btn btn-outline" disabled>
+              <LoaderCircleIcon className="animate-spin" size={16} />
+              In progress
+            </button>
+          );
+        case "paused":
+          return (
+            <button className="btn btn-disabled" disabled>
+              Paused
+            </button>
+          );
+        case "installed":
+          return (
+            <button className="btn btn-disabled" disabled>
+              Installed
+            </button>
+          );
+        case "failed":
+          return (
+            <>
+              <div title={release.install.status.error.message}>
+                <OctagonAlertIcon size={20} className="text-red-400" />
+              </div>
+              <Link
+                className="btn bg-neutral-700 hover:bg-neutral-600"
+                to="/installs"
+              >
+                See Details
+              </Link>
+            </>
+          );
+        default:
+          return null;
+      }
+    } else {
+      switch (release.status.type) {
+        case "available":
+          return (
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                install(release.name, release.flavor)
+                  .then(() => navigate("/installs"))
+                  .catch((e) => console.error(e));
+              }}
             >
-              See Details
-            </Link>
-          </>
-        );
-      default:
-        return null;
+              Install
+            </button>
+          );
+        default:
+          return null;
+      }
     }
   };
 

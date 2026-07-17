@@ -15,6 +15,7 @@ pub struct InstallService {
     inner: Arc<InstallServiceInner>,
 }
 
+#[derive(Clone)]
 pub struct Install {
     pub id: String,
     pub version: String,
@@ -34,8 +35,6 @@ pub struct InstallAddEventArgs;
 
 pub struct InstallUpdateEventArgs {
     pub id: String,
-    pub version: String,
-    pub flavor: String,
     pub status: InstallStatus,
 }
 
@@ -88,8 +87,6 @@ impl InstallService {
 
                 let args = InstallUpdateEventArgs {
                     id: args.state.id.clone(),
-                    version: args.state.version.clone(),
-                    flavor: args.state.flavor.clone(),
                     status,
                 };
 

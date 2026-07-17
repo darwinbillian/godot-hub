@@ -19,11 +19,8 @@ use crate::{
         client::GodotWebsiteClient,
         providers::{GodotWebsiteDownloadProvider, GodotWebsiteReleaseProvider},
     },
-    presentation::ipc::features::{
-        install::events::{
-            InstallAddEventEmitter, InstallRemoveEventEmitter, InstallUpdateEventEmitter,
-        },
-        release::events::ReleaseUpdateEventEmitter,
+    presentation::ipc::features::install::events::{
+        InstallAddEventEmitter, InstallRemoveEventEmitter, InstallUpdateEventEmitter,
     },
     state::AppState,
 };
@@ -85,10 +82,6 @@ pub fn run() {
             install_service
                 .remove_event()
                 .subscribe(InstallRemoveEventEmitter::new(app.handle().clone()));
-
-            release_service
-                .update_event()
-                .subscribe(ReleaseUpdateEventEmitter::new(app.handle().clone()));
 
             let state = AppState {
                 install_service,
