@@ -18,6 +18,7 @@ use crate::{
 #[derive(Serialize, Debug)]
 pub struct InstallDto {
     id: String,
+    name: String,
     version: String,
     flavor: String,
     status: InstallStatusDto,
@@ -70,6 +71,7 @@ impl From<Install> for InstallDto {
     fn from(value: Install) -> Self {
         Self {
             id: value.id,
+            name: value.name,
             version: value.version,
             flavor: value.flavor,
             status: value.status.into(),

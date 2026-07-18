@@ -19,6 +19,7 @@ pub struct InstallService {
 #[derive(Clone)]
 pub struct Install {
     pub id: String,
+    pub name: String,
     pub version: String,
     pub flavor: String,
     pub status: InstallStatus,
@@ -159,6 +160,7 @@ impl InstallService {
 
             let install = Install {
                 id: task.state.id.clone(),
+                name: task.state.name.clone(),
                 version: task.state.version.clone(),
                 flavor: task.state.flavor.clone(),
                 status,
@@ -170,6 +172,7 @@ impl InstallService {
         for installation in installations {
             let install = Install {
                 id: installation.id.clone(),
+                name: installation.name.clone(),
                 flavor: installation.flavor.clone(),
                 version: installation.version.clone(),
                 status: InstallStatus::Installed(Arc::new(installation)),

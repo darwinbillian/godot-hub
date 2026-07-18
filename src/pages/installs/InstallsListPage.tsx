@@ -118,7 +118,7 @@ const InstallCard = memo(({ install }: { install: Install }) => {
         <img className="size-8" src="/icon.svg" />
       </div>
       <div className="flex-1">
-        <h2 className="font-semibold">Godot {install.version}</h2>
+        <h2 className="font-semibold">{install.name}</h2>
         <InstallCardBody install={install} />
       </div>
       <div>
@@ -341,7 +341,7 @@ function InstallCardActions({ install }: { install: Install }) {
             </div>
           </div>
           <div>
-            <p>Are you sure you want to uninstall Godot {install.version}?</p>
+            <p>Are you sure you want to uninstall {install.name}?</p>
             <p>This action will remove the Editor from your system.</p>
           </div>
           <div className="flex justify-end gap-2 border-t">
@@ -420,7 +420,7 @@ function CancelButton({ install }: { install: Install }) {
             </div>
           </div>
           <div>
-            <p>Godot {install.version}</p>
+            <p>{install.name}</p>
           </div>
           <div className="flex justify-end gap-2 border-t">
             <button

@@ -23,12 +23,14 @@ pub struct Installer {
     download_service: DownloadService,
     installation_service: InstallationService,
     id: String,
+    name: String,
     version: String,
     flavor: String,
 }
 
 pub struct InstallerState {
     pub id: String,
+    pub name: String,
     pub version: String,
     pub flavor: String,
 }
@@ -68,10 +70,12 @@ impl InstallerService {
 
     pub fn create(&self, version: &str, flavor: &str) -> Installer {
         let id = format!("{}-{}", version, flavor);
+        let name = format!("Godot {}", version);
         Installer {
             download_service: self.inner.download_service.clone(),
             installation_service: self.inner.installation_service.clone(),
-            id: id.to_owned(),
+            id,
+            name,
             version: version.to_owned(),
             flavor: flavor.to_owned(),
         }
@@ -85,9 +89,13 @@ impl Installer {
     ) -> Result<Installation, TaskError> {
         let (slug, platform) = self.get_slug_and_platform()?;
 
-        let transaction =
-            self.installation_service
-                .create(&self.id, &self.version, &self.flavor, &platform);
+        let transaction = self.installation_service.create(
+            &self.id,
+            &self.name,
+            &self.version,
+            &self.flavor,
+            &platform,
+        );
 
         let download_path = self.download(controller, &slug, &platform).await?;
         self.extract(controller, &transaction, &download_path)
@@ -170,6 +178,7 @@ where
         let value = value.borrow();
         Self {
             id: value.id.clone(),
+            name: value.name.clone(),
             version: value.version.clone(),
             flavor: value.flavor.clone(),
         }

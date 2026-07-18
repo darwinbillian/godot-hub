@@ -18,6 +18,7 @@ pub struct InstallationService {
 pub struct Installation {
     pub dir: PathBuf,
     pub id: String,
+    pub name: String,
     pub version: String,
     pub flavor: String,
     pub platform: String,
@@ -27,6 +28,7 @@ pub struct Installation {
 pub struct InstallationTransaction {
     dir: PathBuf,
     id: String,
+    name: String,
     version: String,
     platform: String,
     flavor: String,
@@ -41,6 +43,7 @@ pub struct InstallationHandle {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstallationMetadata {
+    pub name: String,
     pub version: String,
     pub flavor: String,
     pub platform: String,
@@ -73,6 +76,7 @@ impl InstallationService {
     pub fn create(
         &self,
         id: &str,
+        name: &str,
         version: &str,
         flavor: &str,
         platform: &str,
@@ -80,6 +84,7 @@ impl InstallationService {
         InstallationTransaction {
             dir: self.inner.dir.join(id),
             id: id.to_owned(),
+            name: name.to_owned(),
             version: version.to_owned(),
             flavor: flavor.to_owned(),
             platform: platform.to_owned(),
@@ -114,6 +119,7 @@ impl InstallationService {
             let installation = Installation {
                 dir,
                 id,
+                name: metadata.name,
                 version: metadata.version,
                 flavor: metadata.flavor,
                 platform: metadata.platform,
@@ -184,6 +190,7 @@ impl InstallationTransaction {
         let installation = Installation {
             dir: self.dir,
             id: self.id,
+            name: self.name,
             version: self.version,
             flavor: self.flavor,
             platform: self.platform,
@@ -226,6 +233,7 @@ where
     fn from(value: I) -> Self {
         let value = value.borrow();
         Self {
+            name: value.name.clone(),
             version: value.version.clone(),
             flavor: value.flavor.clone(),
             platform: value.platform.clone(),

@@ -2,6 +2,7 @@ import { Error } from "@/lib/ipc/types";
 
 export interface Install {
   id: string;
+  name: string;
   version: string;
   flavor: string;
   status: InstallStatus;
