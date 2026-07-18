@@ -1,6 +1,7 @@
 import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { Progress } from "@/components/Progress";
+import { SearchBox } from "@/components/SearchBox";
 import {
   cancel,
   install,
@@ -33,6 +34,7 @@ import { Link } from "react-router";
 
 export default function InstallsListPage() {
   const [installs, setInstalls] = useState<Install[]>();
+  const [search, setSearch] = useState("");
 
   const updateInstalls = () => {
     list()
@@ -90,9 +92,33 @@ export default function InstallsListPage() {
       );
     }
 
+    const filteredInstalls = installs.filter((install) =>
+      install.name.toLowerCase().includes(search.toLowerCase()),
+    );
+
+    if (!filteredInstalls.length) {
+      return (
+        <div className="flex flex-col items-center gap-2 py-32 text-sm">
+          <h2 className="font-semibold">No results</h2>
+          <p className="text-neutral-400">
+            Try adjusting your search term or clearing your current search to
+            see all installs.
+          </p>
+          <button
+            className="btn btn-outline"
+            onClick={() => {
+              setSearch("");
+            }}
+          >
+            Clear all
+          </button>
+        </div>
+      );
+    }
+
     return (
       <ul className="flex flex-col gap-4">
-        {installs.map((install) => (
+        {filteredInstalls.map((install) => (
           <li key={install.id}>
             <InstallCard install={install} />
           </li>
@@ -107,7 +133,14 @@ export default function InstallsListPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">Installs</h1>
         </div>
-        <div>
+        <div className="flex items-center gap-2 text-neutral-900">
+          <SearchBox
+            className="input w-50"
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+            }}
+          />
           <Link className="btn btn-primary" to="/installs/install">
             Install Editor
           </Link>

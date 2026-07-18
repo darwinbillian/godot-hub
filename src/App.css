@@ -13,6 +13,12 @@
   }
 }
 
+@layer base {
+  ::-webkit-search-cancel-button {
+    @apply appearance-none;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex cursor-pointer items-center gap-1 rounded border px-2 py-0.5 font-semibold transition disabled:pointer-events-none;
@@ -74,6 +80,18 @@
 
   .card {
     @apply rounded border border-white/10 bg-neutral-800;
+  }
+
+  .input {
+    @apply inline-flex cursor-text items-center gap-2 rounded border border-white/10 bg-neutral-800 px-2 py-0.5 text-neutral-400 -outline-offset-2 outline-blue-500 focus-within:outline-2;
+
+    input {
+      @apply min-w-0 flex-1 text-neutral-200 outline-none;
+
+      &::placeholder {
+        @apply text-neutral-400;
+      }
+    }
   }
 
   .menu {
