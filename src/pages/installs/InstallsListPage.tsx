@@ -315,58 +315,56 @@ function InstallCardActions({ install }: { install: Install }) {
               <Trash2Icon size={16} />
               Uninstall
             </button>
-            <Modal
-              open={uninstallModalOpen}
-              onClose={() => {
-                setUninstallModalOpen(false);
-              }}
-            >
-              <div className="modal w-120">
-                <div className="flex items-center border-b">
-                  <div className="flex-1">
-                    <h2 className="text-lg font-semibold">Uninstall Editor</h2>
-                  </div>
-                  <div>
-                    <button
-                      className="btn btn-ghost p-1"
-                      onClick={() => {
-                        setUninstallModalOpen(false);
-                      }}
-                    >
-                      <XIcon size={20} />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p>
-                    Are you sure you want to uninstall Godot {install.version}?
-                  </p>
-                  <p>This action will remove the Editor from your system.</p>
-                </div>
-                <div className="flex justify-end gap-2 border-t">
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => {
-                      setUninstallModalOpen(false);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="btn btn-error"
-                    onClick={() => {
-                      setUninstallModalOpen(false);
-                      uninstall(install.id).catch((e) => console.error(e));
-                    }}
-                  >
-                    Uninstall
-                  </button>
-                </div>
-              </div>
-            </Modal>
           </li>
         </ul>
       </Menu>
+      <Modal
+        open={uninstallModalOpen}
+        onClose={() => {
+          setUninstallModalOpen(false);
+        }}
+      >
+        <div className="modal w-120">
+          <div className="flex items-center border-b">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold">Uninstall Editor</h2>
+            </div>
+            <div>
+              <button
+                className="btn btn-ghost p-1"
+                onClick={() => {
+                  setUninstallModalOpen(false);
+                }}
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+          </div>
+          <div>
+            <p>Are you sure you want to uninstall Godot {install.version}?</p>
+            <p>This action will remove the Editor from your system.</p>
+          </div>
+          <div className="flex justify-end gap-2 border-t">
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                setUninstallModalOpen(false);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-error"
+              onClick={() => {
+                setUninstallModalOpen(false);
+                uninstall(install.id).catch((e) => console.error(e));
+              }}
+            >
+              Uninstall
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
