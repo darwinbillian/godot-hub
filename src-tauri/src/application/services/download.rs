@@ -27,36 +27,6 @@ pub struct DownloadService {
     inner: Arc<DownloadServiceInner>,
 }
 
-pub struct DownloadRequest {
-    pub version: String,
-    pub flavor: String,
-    pub slug: String,
-    pub platform: String,
-}
-
-pub struct DownloadResponse {
-    pub stream: Pin<Box<dyn Stream<Item = Result<Bytes>> + Send>>,
-    pub size: Option<u64>,
-}
-
-pub struct DownloadHandle {
-    pub stream: Pin<Box<dyn Stream<Item = Result<DownloadProgress, TaskError>> + Send>>,
-    pub path: PathBuf,
-}
-
-pub struct DownloadProgress {
-    pub downloaded: u64,
-    pub size: Option<u64>,
-    pub status: DownloadStatus,
-}
-
-#[derive(PartialEq)]
-pub enum DownloadStatus {
-    Starting,
-    Downloading,
-    Completed,
-}
-
 struct DownloadServiceInner {
     download_provider: Arc<dyn DownloadProvider + Send + Sync>,
     dir: PathBuf,
@@ -146,6 +116,13 @@ impl DownloadService {
     }
 }
 
+pub struct DownloadRequest {
+    pub version: String,
+    pub flavor: String,
+    pub slug: String,
+    pub platform: String,
+}
+
 impl DownloadRequest {
     pub fn new(version: &str, flavor: &str, slug: &str, platform: &str) -> Self {
         Self {
@@ -155,4 +132,27 @@ impl DownloadRequest {
             platform: platform.to_owned(),
         }
     }
+}
+
+pub struct DownloadResponse {
+    pub stream: Pin<Box<dyn Stream<Item = Result<Bytes>> + Send>>,
+    pub size: Option<u64>,
+}
+
+pub struct DownloadHandle {
+    pub stream: Pin<Box<dyn Stream<Item = Result<DownloadProgress, TaskError>> + Send>>,
+    pub path: PathBuf,
+}
+
+pub struct DownloadProgress {
+    pub downloaded: u64,
+    pub size: Option<u64>,
+    pub status: DownloadStatus,
+}
+
+#[derive(PartialEq)]
+pub enum DownloadStatus {
+    Starting,
+    Downloading,
+    Completed,
 }

@@ -16,55 +16,10 @@ pub struct TaskService<TState, TProgress, TResult> {
     inner: Arc<TaskServiceInner<TState, TProgress, TResult>>,
 }
 
-pub struct Task<TState, TProgress, TResult> {
-    pub id: String,
-    pub state: Arc<TState>,
-    pub status: TaskStatus<TProgress, TResult>,
-}
-
-pub struct TaskHandle<TState, TProgress, TResult> {
-    inner: Arc<TaskHandleInner<TState, TProgress, TResult>>,
-}
-
-pub struct TaskController<TState, TProgress, TResult> {
-    handle: TaskHandle<TState, TProgress, TResult>,
-}
-
-pub enum TaskStatus<TProgress, TResult> {
-    Pending,
-    Running(Arc<TProgress>),
-    Paused(Arc<TProgress>),
-    Completed(Arc<TResult>),
-    Cancelled,
-    Failed(Arc<Error>),
-}
-
-pub enum TaskError {
-    Cancelled,
-    Failed(Error),
-}
-
-pub struct TaskStartEventArgs;
-
-pub struct TaskUpdateEventArgs<TState, TProgress, TResult> {
-    pub state: Arc<TState>,
-    pub status: TaskStatus<TProgress, TResult>,
-}
-
 struct TaskServiceInner<TState, TProgress, TResult> {
     start_event: Event<TaskStartEventArgs>,
     update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
     tasks: Mutex<HashMap<String, TaskHandle<TState, TProgress, TResult>>>,
-}
-
-struct TaskHandleInner<TState, TProgress, TResult> {
-    cancellation_token: CancellationToken,
-    pause_token: PauseToken,
-    start_event: Event<TaskStartEventArgs>,
-    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
-    id: String,
-    state: Arc<TState>,
-    status: Mutex<TaskStatus<TProgress, TResult>>,
 }
 
 impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
@@ -125,6 +80,20 @@ impl<TState, TProgress, TResult> TaskService<TState, TProgress, TResult> {
     }
 }
 
+impl<TState, TProgress, TResult> Clone for TaskService<TState, TProgress, TResult> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+pub struct Task<TState, TProgress, TResult> {
+    pub id: String,
+    pub state: Arc<TState>,
+    pub status: TaskStatus<TProgress, TResult>,
+}
+
 impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
     pub fn new(id: &str, state: TState) -> Self {
         Task {
@@ -147,6 +116,34 @@ impl<TState, TProgress, TResult> Task<TState, TProgress, TResult> {
             }),
         }
     }
+}
+
+impl<TState, TProgress, TResult, T> From<T> for Task<TState, TProgress, TResult>
+where
+    T: Borrow<TaskHandle<TState, TProgress, TResult>>,
+{
+    fn from(value: T) -> Self {
+        let value = value.borrow();
+        Self {
+            id: value.inner.id.clone(),
+            state: value.inner.state.clone(),
+            status: value.inner.status.lock().unwrap().clone(),
+        }
+    }
+}
+
+pub struct TaskHandle<TState, TProgress, TResult> {
+    inner: Arc<TaskHandleInner<TState, TProgress, TResult>>,
+}
+
+struct TaskHandleInner<TState, TProgress, TResult> {
+    cancellation_token: CancellationToken,
+    pause_token: PauseToken,
+    start_event: Event<TaskStartEventArgs>,
+    update_event: Event<TaskUpdateEventArgs<TState, TProgress, TResult>>,
+    id: String,
+    state: Arc<TState>,
+    status: Mutex<TaskStatus<TProgress, TResult>>,
 }
 
 impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
@@ -231,6 +228,18 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
     }
 }
 
+impl<TState, TProgress, TResult> Clone for TaskHandle<TState, TProgress, TResult> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+pub struct TaskController<TState, TProgress, TResult> {
+    handle: TaskHandle<TState, TProgress, TResult>,
+}
+
 impl<TState, TProgress, TResult> TaskController<TState, TProgress, TResult> {
     pub fn new(handle: TaskHandle<TState, TProgress, TResult>) -> Self {
         Self { handle }
@@ -274,30 +283,31 @@ impl<TState, TProgress, TResult> TaskController<TState, TProgress, TResult> {
     }
 }
 
-impl TaskStartEventArgs {
-    pub fn new() -> Self {
-        Self
-    }
+pub enum TaskStatus<TProgress, TResult> {
+    Pending,
+    Running(Arc<TProgress>),
+    Paused(Arc<TProgress>),
+    Completed(Arc<TResult>),
+    Cancelled,
+    Failed(Arc<Error>),
 }
 
-impl<TState, TProgress, TResult> TaskUpdateEventArgs<TState, TProgress, TResult> {
-    pub fn new(state: Arc<TState>, status: TaskStatus<TProgress, TResult>) -> Self {
-        Self { state, status }
-    }
-}
-
-impl<TState, TProgress, TResult, T> From<T> for Task<TState, TProgress, TResult>
-where
-    T: Borrow<TaskHandle<TState, TProgress, TResult>>,
-{
-    fn from(value: T) -> Self {
-        let value = value.borrow();
-        Self {
-            id: value.inner.id.clone(),
-            state: value.inner.state.clone(),
-            status: value.inner.status.lock().unwrap().clone(),
+impl<TProgress, TResult> Clone for TaskStatus<TProgress, TResult> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Pending => Self::Pending,
+            Self::Running(progress) => Self::Running(progress.clone()),
+            Self::Paused(progress) => Self::Paused(progress.clone()),
+            Self::Completed(result) => Self::Completed(result.clone()),
+            Self::Cancelled => Self::Cancelled,
+            Self::Failed(e) => Self::Failed(e.clone()),
         }
     }
+}
+
+pub enum TaskError {
+    Cancelled,
+    Failed(Error),
 }
 
 impl<E> From<E> for TaskError
@@ -315,31 +325,21 @@ impl From<CancellationError> for TaskError {
     }
 }
 
-impl<TState, TProgress, TResult> Clone for TaskService<TState, TProgress, TResult> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
+pub struct TaskStartEventArgs;
+
+impl TaskStartEventArgs {
+    pub fn new() -> Self {
+        Self
     }
 }
 
-impl<TState, TProgress, TResult> Clone for TaskHandle<TState, TProgress, TResult> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
-    }
+pub struct TaskUpdateEventArgs<TState, TProgress, TResult> {
+    pub state: Arc<TState>,
+    pub status: TaskStatus<TProgress, TResult>,
 }
 
-impl<TProgress, TResult> Clone for TaskStatus<TProgress, TResult> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Pending => Self::Pending,
-            Self::Running(progress) => Self::Running(progress.clone()),
-            Self::Paused(progress) => Self::Paused(progress.clone()),
-            Self::Completed(result) => Self::Completed(result.clone()),
-            Self::Cancelled => Self::Cancelled,
-            Self::Failed(e) => Self::Failed(e.clone()),
-        }
+impl<TState, TProgress, TResult> TaskUpdateEventArgs<TState, TProgress, TResult> {
+    pub fn new(state: Arc<TState>, status: TaskStatus<TProgress, TResult>) -> Self {
+        Self { state, status }
     }
 }

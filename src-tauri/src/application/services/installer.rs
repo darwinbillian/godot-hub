@@ -19,37 +19,6 @@ pub struct InstallerService {
     inner: Arc<InstallerServiceInner>,
 }
 
-pub struct Installer {
-    download_service: DownloadService,
-    installation_service: InstallationService,
-    id: String,
-    name: String,
-    version: String,
-    flavor: String,
-}
-
-pub struct InstallerState {
-    pub id: String,
-    pub name: String,
-    pub version: String,
-    pub flavor: String,
-}
-
-#[derive(Default)]
-pub enum InstallerProgress {
-    #[default]
-    Starting,
-    Downloading(DownloadProgress),
-    Extracting,
-    Finalizing,
-}
-
-#[derive(Error, Debug)]
-pub enum InstallerError {
-    #[error("platform '{os}-{arch}' is not supported")]
-    PlatformNotSupported { arch: String, os: String },
-}
-
 struct InstallerServiceInner {
     download_service: DownloadService,
     installation_service: InstallationService,
@@ -80,6 +49,15 @@ impl InstallerService {
             flavor: flavor.to_owned(),
         }
     }
+}
+
+pub struct Installer {
+    download_service: DownloadService,
+    installation_service: InstallationService,
+    id: String,
+    name: String,
+    version: String,
+    flavor: String,
 }
 
 impl Installer {
@@ -170,6 +148,13 @@ impl Installer {
     }
 }
 
+pub struct InstallerState {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub flavor: String,
+}
+
 impl<I> From<I> for InstallerState
 where
     I: Borrow<Installer>,
@@ -183,4 +168,19 @@ where
             flavor: value.flavor.clone(),
         }
     }
+}
+
+#[derive(Default)]
+pub enum InstallerProgress {
+    #[default]
+    Starting,
+    Downloading(DownloadProgress),
+    Extracting,
+    Finalizing,
+}
+
+#[derive(Error, Debug)]
+pub enum InstallerError {
+    #[error("platform '{os}-{arch}' is not supported")]
+    PlatformNotSupported { arch: String, os: String },
 }

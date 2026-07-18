@@ -11,17 +11,7 @@ pub struct GodotWebsiteReleaseProvider {
     client: GodotWebsiteClient,
 }
 
-pub struct GodotWebsiteDownloadProvider {
-    client: GodotWebsiteClient,
-}
-
 impl GodotWebsiteReleaseProvider {
-    pub fn new(client: GodotWebsiteClient) -> Self {
-        Self { client }
-    }
-}
-
-impl GodotWebsiteDownloadProvider {
     pub fn new(client: GodotWebsiteClient) -> Self {
         Self { client }
     }
@@ -43,6 +33,16 @@ impl ReleaseProvider for GodotWebsiteReleaseProvider {
                 ),
             })
             .collect())
+    }
+}
+
+pub struct GodotWebsiteDownloadProvider {
+    client: GodotWebsiteClient,
+}
+
+impl GodotWebsiteDownloadProvider {
+    pub fn new(client: GodotWebsiteClient) -> Self {
+        Self { client }
     }
 }
 

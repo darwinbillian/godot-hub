@@ -4,6 +4,26 @@ pub trait EventHandler<T> {
     fn invoke(&self, args: Arc<T>);
 }
 
+impl<T, F> EventHandler<T> for F
+where
+    F: Fn(Arc<T>),
+{
+    fn invoke(&self, args: Arc<T>) {
+        self(args)
+    }
+}
+
+impl<T, E> EventHandler<T> for Vec<E>
+where
+    E: AsRef<dyn EventHandler<T> + Send + Sync>,
+{
+    fn invoke(&self, args: Arc<T>) {
+        for handler in self {
+            handler.as_ref().invoke(args.clone())
+        }
+    }
+}
+
 pub struct Event<T> {
     handlers: Arc<Mutex<Vec<Arc<dyn EventHandler<T> + Send + Sync>>>>,
 }
@@ -63,36 +83,16 @@ impl<T> Event<T> {
     }
 }
 
-impl<T> EventHandler<T> for Event<T> {
-    fn invoke(&self, args: Arc<T>) {
-        self.invoke(args);
-    }
-}
-
-impl<T, F> EventHandler<T> for F
-where
-    F: Fn(Arc<T>),
-{
-    fn invoke(&self, args: Arc<T>) {
-        self(args)
-    }
-}
-
-impl<T, E> EventHandler<T> for Vec<E>
-where
-    E: AsRef<dyn EventHandler<T> + Send + Sync>,
-{
-    fn invoke(&self, args: Arc<T>) {
-        for handler in self {
-            handler.as_ref().invoke(args.clone())
-        }
-    }
-}
-
 impl<T> Clone for Event<T> {
     fn clone(&self) -> Self {
         Self {
             handlers: self.handlers.clone(),
         }
+    }
+}
+
+impl<T> EventHandler<T> for Event<T> {
+    fn invoke(&self, args: Arc<T>) {
+        self.invoke(args);
     }
 }

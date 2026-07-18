@@ -24,49 +24,6 @@ pub struct InstallDto {
     status: InstallStatusDto,
 }
 
-#[derive(Serialize, Debug)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum InstallStatusDto {
-    Installing { progress: InstallerProgressDto },
-    Paused { progress: InstallerProgressDto },
-    Installed { installation: InstallationDto },
-    Failed { error: ErrorDto },
-}
-
-#[derive(Serialize, Debug)]
-pub struct InstallAddEventArgsDto;
-
-#[derive(Serialize, Debug)]
-pub struct InstallUpdateEventArgsDto {
-    id: String,
-    status: InstallStatusDto,
-}
-
-#[derive(Serialize, Debug)]
-pub struct InstallRemoveEventArgsDto {
-    id: String,
-}
-
-#[derive(Serialize, Debug)]
-pub struct DownloadProgressDto {
-    downloaded: u64,
-    size: Option<u64>,
-}
-
-#[derive(Serialize, Debug)]
-pub struct InstallationDto {
-    dir: String,
-}
-
-#[derive(Serialize, Debug)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum InstallerProgressDto {
-    Starting,
-    Downloading { progress: DownloadProgressDto },
-    Extracting,
-    Finalizing,
-}
-
 impl From<Install> for InstallDto {
     fn from(value: Install) -> Self {
         Self {
@@ -77,6 +34,15 @@ impl From<Install> for InstallDto {
             status: value.status.into(),
         }
     }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InstallStatusDto {
+    Installing { progress: InstallerProgressDto },
+    Paused { progress: InstallerProgressDto },
+    Installed { installation: InstallationDto },
+    Failed { error: ErrorDto },
 }
 
 impl<I> From<I> for InstallStatusDto
@@ -102,6 +68,9 @@ where
     }
 }
 
+#[derive(Serialize, Debug)]
+pub struct InstallAddEventArgsDto;
+
 impl<I> From<I> for InstallAddEventArgsDto
 where
     I: Borrow<InstallAddEventArgs>,
@@ -109,6 +78,12 @@ where
     fn from(_value: I) -> Self {
         Self
     }
+}
+
+#[derive(Serialize, Debug)]
+pub struct InstallUpdateEventArgsDto {
+    id: String,
+    status: InstallStatusDto,
 }
 
 impl<I> From<I> for InstallUpdateEventArgsDto
@@ -124,6 +99,11 @@ where
     }
 }
 
+#[derive(Serialize, Debug)]
+pub struct InstallRemoveEventArgsDto {
+    id: String,
+}
+
 impl<I> From<I> for InstallRemoveEventArgsDto
 where
     I: Borrow<InstallRemoveEventArgs>,
@@ -134,6 +114,12 @@ where
             id: value.id.clone(),
         }
     }
+}
+
+#[derive(Serialize, Debug)]
+pub struct DownloadProgressDto {
+    downloaded: u64,
+    size: Option<u64>,
 }
 
 impl<D> From<D> for DownloadProgressDto
@@ -149,6 +135,11 @@ where
     }
 }
 
+#[derive(Serialize, Debug)]
+pub struct InstallationDto {
+    dir: String,
+}
+
 impl<I> From<I> for InstallationDto
 where
     I: Borrow<Installation>,
@@ -159,6 +150,15 @@ where
             dir: value.dir.to_string_lossy().into_owned(),
         }
     }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InstallerProgressDto {
+    Starting,
+    Downloading { progress: DownloadProgressDto },
+    Extracting,
+    Finalizing,
 }
 
 impl<I> From<I> for InstallerProgressDto

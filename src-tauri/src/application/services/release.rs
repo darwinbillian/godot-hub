@@ -14,24 +14,6 @@ pub struct ReleaseService {
     install_service: InstallService,
 }
 
-pub struct Release {
-    pub name: String,
-    pub flavor: String,
-    pub release_notes: String,
-    pub status: ReleaseStatus,
-    pub install: Option<Install>,
-}
-
-pub struct ReleaseMetadata {
-    pub name: String,
-    pub flavor: String,
-    pub release_notes: String,
-}
-
-pub enum ReleaseStatus {
-    Available,
-}
-
 impl ReleaseService {
     pub fn new(
         release_provider: Arc<dyn ReleaseProvider + Send + Sync>,
@@ -68,4 +50,22 @@ impl ReleaseService {
             .map(|install| ((install.version.clone(), install.flavor.clone()), install))
             .collect())
     }
+}
+
+pub struct Release {
+    pub name: String,
+    pub flavor: String,
+    pub release_notes: String,
+    pub status: ReleaseStatus,
+    pub install: Option<Install>,
+}
+
+pub struct ReleaseMetadata {
+    pub name: String,
+    pub flavor: String,
+    pub release_notes: String,
+}
+
+pub enum ReleaseStatus {
+    Available,
 }

@@ -16,12 +16,6 @@ pub struct ReleaseDto {
     install: Option<InstallDto>,
 }
 
-#[derive(Serialize, Debug)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum ReleaseStatusDto {
-    Available,
-}
-
 impl From<Release> for ReleaseDto {
     fn from(value: Release) -> Self {
         Self {
@@ -32,6 +26,12 @@ impl From<Release> for ReleaseDto {
             install: value.install.map(InstallDto::from),
         }
     }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ReleaseStatusDto {
+    Available,
 }
 
 impl<R> From<R> for ReleaseStatusDto

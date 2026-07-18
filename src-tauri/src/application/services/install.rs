@@ -16,34 +16,6 @@ pub struct InstallService {
     inner: Arc<InstallServiceInner>,
 }
 
-#[derive(Clone)]
-pub struct Install {
-    pub id: String,
-    pub name: String,
-    pub version: String,
-    pub flavor: String,
-    pub status: InstallStatus,
-}
-
-#[derive(Clone)]
-pub enum InstallStatus {
-    Installing(Arc<InstallerProgress>),
-    Paused(Arc<InstallerProgress>),
-    Installed(Arc<Installation>),
-    Failed(Arc<Error>),
-}
-
-pub struct InstallAddEventArgs;
-
-pub struct InstallUpdateEventArgs {
-    pub id: String,
-    pub status: InstallStatus,
-}
-
-pub struct InstallRemoveEventArgs {
-    pub id: String,
-}
-
 struct InstallServiceInner {
     installation_service: InstallationService,
     installer_service: InstallerService,
@@ -187,10 +159,34 @@ impl InstallService {
     }
 }
 
+#[derive(Clone)]
+pub struct Install {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub flavor: String,
+    pub status: InstallStatus,
+}
+
+#[derive(Clone)]
+pub enum InstallStatus {
+    Installing(Arc<InstallerProgress>),
+    Paused(Arc<InstallerProgress>),
+    Installed(Arc<Installation>),
+    Failed(Arc<Error>),
+}
+
+pub struct InstallAddEventArgs;
+
 impl InstallAddEventArgs {
     pub fn new() -> Self {
         Self
     }
+}
+
+pub struct InstallUpdateEventArgs {
+    pub id: String,
+    pub status: InstallStatus,
 }
 
 impl InstallUpdateEventArgs {
@@ -200,6 +196,10 @@ impl InstallUpdateEventArgs {
             status: status.clone(),
         }
     }
+}
+
+pub struct InstallRemoveEventArgs {
+    pub id: String,
 }
 
 impl InstallRemoveEventArgs {

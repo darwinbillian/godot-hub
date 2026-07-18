@@ -8,17 +8,27 @@ pub trait CancellationTokenExt {
     fn error_if_cancelled(&self) -> Result<(), CancellationError>;
 }
 
-pub struct CancellationError;
-
-pub struct PauseToken {
-    notify: Notify,
-    paused: AtomicBool,
+impl CancellationTokenExt for CancellationToken {
+    fn error_if_cancelled(&self) -> Result<(), CancellationError> {
+        if self.is_cancelled() {
+            Err(CancellationError::new())
+        } else {
+            Ok(())
+        }
+    }
 }
+
+pub struct CancellationError;
 
 impl CancellationError {
     pub fn new() -> Self {
         Self
     }
+}
+
+pub struct PauseToken {
+    notify: Notify,
+    paused: AtomicBool,
 }
 
 impl PauseToken {
@@ -47,16 +57,6 @@ impl PauseToken {
         let notified = self.notify.notified();
         if self.is_paused() {
             notified.await;
-        }
-    }
-}
-
-impl CancellationTokenExt for CancellationToken {
-    fn error_if_cancelled(&self) -> Result<(), CancellationError> {
-        if self.is_cancelled() {
-            Err(CancellationError::new())
-        } else {
-            Ok(())
         }
     }
 }

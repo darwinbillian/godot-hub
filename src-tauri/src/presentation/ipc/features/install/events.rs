@@ -12,27 +12,7 @@ pub struct InstallAddEventEmitter {
     app: AppHandle,
 }
 
-pub struct InstallUpdateEventEmitter {
-    app: AppHandle,
-}
-
-pub struct InstallRemoveEventEmitter {
-    app: AppHandle,
-}
-
 impl InstallAddEventEmitter {
-    pub fn new(app: AppHandle) -> Self {
-        Self { app }
-    }
-}
-
-impl InstallUpdateEventEmitter {
-    pub fn new(app: AppHandle) -> Self {
-        Self { app }
-    }
-}
-
-impl InstallRemoveEventEmitter {
     pub fn new(app: AppHandle) -> Self {
         Self { app }
     }
@@ -46,11 +26,31 @@ impl EventHandler<InstallAddEventArgs> for InstallAddEventEmitter {
     }
 }
 
+pub struct InstallUpdateEventEmitter {
+    app: AppHandle,
+}
+
+impl InstallUpdateEventEmitter {
+    pub fn new(app: AppHandle) -> Self {
+        Self { app }
+    }
+}
+
 impl EventHandler<InstallUpdateEventArgs> for InstallUpdateEventEmitter {
     fn invoke(&self, args: Arc<InstallUpdateEventArgs>) {
         let _ = self
             .app
             .emit("installs::update", &InstallUpdateEventArgsDto::from(args));
+    }
+}
+
+pub struct InstallRemoveEventEmitter {
+    app: AppHandle,
+}
+
+impl InstallRemoveEventEmitter {
+    pub fn new(app: AppHandle) -> Self {
+        Self { app }
     }
 }
 

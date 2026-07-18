@@ -15,45 +15,6 @@ pub struct InstallationService {
     inner: Arc<InstallationServiceInner>,
 }
 
-pub struct Installation {
-    pub dir: PathBuf,
-    pub id: String,
-    pub name: String,
-    pub version: String,
-    pub flavor: String,
-    pub platform: String,
-    pub executable: String,
-}
-
-pub struct InstallationTransaction {
-    dir: PathBuf,
-    id: String,
-    name: String,
-    version: String,
-    platform: String,
-    flavor: String,
-}
-
-pub struct InstallationHandle {
-    remove_event: Event<InstallationRemoveEventArgs>,
-    dir: PathBuf,
-    id: String,
-    executable: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct InstallationMetadata {
-    pub name: String,
-    pub version: String,
-    pub flavor: String,
-    pub platform: String,
-    pub executable: String,
-}
-
-pub struct InstallationRemoveEventArgs {
-    pub id: String,
-}
-
 struct InstallationServiceInner {
     remove_event: Event<InstallationRemoveEventArgs>,
     dir: PathBuf,
@@ -145,6 +106,23 @@ impl InstallationService {
     }
 }
 
+pub struct Installation {
+    pub dir: PathBuf,
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub flavor: String,
+    pub platform: String,
+    pub executable: String,
+}
+
+pub struct InstallationHandle {
+    remove_event: Event<InstallationRemoveEventArgs>,
+    dir: PathBuf,
+    id: String,
+    executable: String,
+}
+
 impl InstallationHandle {
     pub fn new(dir: &Path, id: &str, executable: &str) -> Self {
         Self {
@@ -181,6 +159,15 @@ impl InstallationHandle {
     }
 }
 
+pub struct InstallationTransaction {
+    dir: PathBuf,
+    id: String,
+    name: String,
+    version: String,
+    platform: String,
+    flavor: String,
+}
+
 impl InstallationTransaction {
     pub fn dir(&self) -> &Path {
         &self.dir
@@ -204,6 +191,15 @@ impl InstallationTransaction {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InstallationMetadata {
+    pub name: String,
+    pub version: String,
+    pub flavor: String,
+    pub platform: String,
+    pub executable: String,
+}
+
 impl InstallationMetadata {
     async fn save(&self, dir: &Path) -> Result<()> {
         let bytes = serde_json::to_vec(self)?;
@@ -220,12 +216,6 @@ impl InstallationMetadata {
     }
 }
 
-impl InstallationRemoveEventArgs {
-    pub fn new(id: &str) -> Self {
-        Self { id: id.to_owned() }
-    }
-}
-
 impl<I> From<I> for InstallationMetadata
 where
     I: Borrow<Installation>,
@@ -239,5 +229,15 @@ where
             platform: value.platform.clone(),
             executable: value.executable.clone(),
         }
+    }
+}
+
+pub struct InstallationRemoveEventArgs {
+    pub id: String,
+}
+
+impl InstallationRemoveEventArgs {
+    pub fn new(id: &str) -> Self {
+        Self { id: id.to_owned() }
     }
 }
