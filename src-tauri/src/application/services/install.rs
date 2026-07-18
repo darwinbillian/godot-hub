@@ -1,11 +1,11 @@
-use std::{borrow::Borrow, collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::application::{
     error::Error,
     services::{
-        installation::{Installation, InstallationRemoveEventArgs, InstallationService},
+        installation::{Installation, InstallationService},
         installer::{InstallerProgress, InstallerService, InstallerState},
-        task::{Task, TaskService, TaskStartEventArgs, TaskStatus},
+        task::{Task, TaskService, TaskStatus},
     },
     utils::event::Event,
 };
@@ -63,12 +63,12 @@ impl InstallService {
 
         installation_service
             .remove_event()
-            .map(InstallRemoveEventArgs::from)
+            .map(|args| InstallRemoveEventArgs::new(&args.id))
             .subscribe(remove_event.clone());
 
         task_service
             .start_event()
-            .map(InstallAddEventArgs::from)
+            .map(|_args| InstallAddEventArgs::new())
             .subscribe(add_event.clone());
 
         task_service
@@ -84,11 +84,7 @@ impl InstallService {
                     _ => return None,
                 };
 
-                let args = InstallUpdateEventArgs {
-                    id: args.state.id.clone(),
-                    status,
-                };
-
+                let args = InstallUpdateEventArgs::new(&args.state.id, status);
                 Some(args)
             })
             .subscribe(update_event.clone());
@@ -171,7 +167,13 @@ impl InstallService {
         }
 
         for installation in installations {
-            let install = Install::from(installation);
+            let install = Install {
+                id: installation.id.clone(),
+                flavor: installation.flavor.clone(),
+                version: installation.version.clone(),
+                status: InstallStatus::Installed(Arc::new(installation)),
+            };
+
             installs.insert(install.id.clone(), install);
         }
 
@@ -181,40 +183,23 @@ impl InstallService {
     }
 }
 
-impl InstallRemoveEventArgs {
-    pub fn new(id: &str) -> Self {
-        Self { id: id.to_owned() }
-    }
-}
-
-impl From<Installation> for Install {
-    fn from(value: Installation) -> Self {
-        Self {
-            id: value.id.clone(),
-            version: value.version.clone(),
-            flavor: value.flavor.clone(),
-            status: InstallStatus::Installed(Arc::new(value)),
-        }
-    }
-}
-
-impl<T> From<T> for InstallAddEventArgs
-where
-    T: Borrow<TaskStartEventArgs>,
-{
-    fn from(_value: T) -> Self {
+impl InstallAddEventArgs {
+    pub fn new() -> Self {
         Self
     }
 }
 
-impl<I> From<I> for InstallRemoveEventArgs
-where
-    I: Borrow<InstallationRemoveEventArgs>,
-{
-    fn from(value: I) -> Self {
-        let value = value.borrow();
+impl InstallUpdateEventArgs {
+    pub fn new(id: &str, status: InstallStatus) -> Self {
         Self {
-            id: value.id.clone(),
+            id: id.to_owned(),
+            status: status.clone(),
         }
+    }
+}
+
+impl InstallRemoveEventArgs {
+    pub fn new(id: &str) -> Self {
+        Self { id: id.to_owned() }
     }
 }

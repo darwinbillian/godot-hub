@@ -171,6 +171,10 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
         &self.inner.id
     }
 
+    pub fn state(&self) -> Arc<TState> {
+        self.inner.state.clone()
+    }
+
     pub fn status(&self) -> TaskStatus<TProgress, TResult> {
         let inner = self.inner.status.lock().unwrap();
         inner.clone()
@@ -223,7 +227,7 @@ impl<TState, TProgress, TResult> TaskHandle<TState, TProgress, TResult> {
     fn update_status(&self, status: TaskStatus<TProgress, TResult>) {
         self.set_status(status);
 
-        let args = TaskUpdateEventArgs::from(self);
+        let args = TaskUpdateEventArgs::new(self.state(), self.status());
         self.inner.update_event.invoke(Arc::new(args));
     }
 }
@@ -242,7 +246,7 @@ impl<TState, TProgress, TResult> TaskController<TState, TProgress, TResult> {
             .update_status(TaskStatus::Running(Arc::new(progress)))
     }
 
-    pub async fn paused(&self) -> Result<(), TaskError> {
+    pub async fn cancelled_or_paused(&self) -> Result<(), TaskError> {
         self.cancellation_token().error_if_cancelled()?;
 
         if !self.handle.pause_token().is_paused() {
@@ -277,9 +281,15 @@ impl TaskStartEventArgs {
     }
 }
 
-impl<TState, TProgress, TStatus, T> From<T> for Task<TState, TProgress, TStatus>
+impl<TState, TProgress, TResult> TaskUpdateEventArgs<TState, TProgress, TResult> {
+    pub fn new(state: Arc<TState>, status: TaskStatus<TProgress, TResult>) -> Self {
+        Self { state, status }
+    }
+}
+
+impl<TState, TProgress, TResult, T> From<T> for Task<TState, TProgress, TResult>
 where
-    T: Borrow<TaskHandle<TState, TProgress, TStatus>>,
+    T: Borrow<TaskHandle<TState, TProgress, TResult>>,
 {
     fn from(value: T) -> Self {
         let value = value.borrow();
@@ -306,19 +316,6 @@ impl From<CancellationError> for TaskError {
     }
 }
 
-impl<TState, TProgress, TResult, T> From<T> for TaskUpdateEventArgs<TState, TProgress, TResult>
-where
-    T: Into<Task<TState, TProgress, TResult>>,
-{
-    fn from(value: T) -> Self {
-        let value = value.into();
-        Self {
-            state: value.state,
-            status: value.status,
-        }
-    }
-}
-
 impl<TState, TProgress, TResult> Clone for TaskService<TState, TProgress, TResult> {
     fn clone(&self) -> Self {
         Self {
@@ -331,14 +328,6 @@ impl<TState, TProgress, TResult> Clone for TaskHandle<TState, TProgress, TResult
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
-        }
-    }
-}
-
-impl<TState, TProgress, TResult> Clone for TaskController<TState, TProgress, TResult> {
-    fn clone(&self) -> Self {
-        Self {
-            handle: self.handle.clone(),
         }
     }
 }

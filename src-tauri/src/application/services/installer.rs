@@ -88,7 +88,7 @@ impl Installer {
         Ok(installation)
     }
 
-    pub async fn download(
+    async fn download(
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
     ) -> Result<PathBuf, TaskError> {
@@ -110,13 +110,13 @@ impl Installer {
                 last_progress = Instant::now();
             }
 
-            controller.paused().await?;
+            controller.cancelled_or_paused().await?;
         }
 
         Ok(handle.path)
     }
 
-    pub async fn extract(
+    async fn extract(
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
         transaction: &InstallationTransaction,
@@ -127,7 +127,7 @@ impl Installer {
         Ok(())
     }
 
-    pub async fn finalize(
+    async fn finalize(
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
         transaction: InstallationTransaction,
