@@ -68,6 +68,22 @@ export default function InstallsInstallPage() {
     });
   }, []);
 
+  const renderReleases = () => {
+    if (!releases?.length) {
+      return null;
+    }
+
+    return (
+      <ul className="flex flex-col gap-4">
+        {releases.map((release) => (
+          <li key={release.name}>
+            <ReleaseCard release={release} />
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center gap-2">
@@ -76,15 +92,7 @@ export default function InstallsInstallPage() {
         </Link>
         <h1 className="text-2xl font-semibold">Install Godot Editor</h1>
       </div>
-      <div>
-        <ul className="flex flex-col gap-4">
-          {releases?.map((release) => (
-            <li key={release.name}>
-              <ReleaseCard release={release} />
-            </li>
-          ))}
-        </ul>
-      </div>
+      <div>{renderReleases()}</div>
     </div>
   );
 }

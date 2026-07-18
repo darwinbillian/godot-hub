@@ -70,6 +70,37 @@ export default function InstallsListPage() {
     });
   }, []);
 
+  const renderInstalls = () => {
+    if (!installs) {
+      return null;
+    }
+
+    if (!installs.length) {
+      return (
+        <div className="flex flex-col items-center gap-2 py-32 text-sm">
+          <h2 className="font-semibold">No installs</h2>
+          <p className="text-neutral-400">
+            To get started, install a version of Godot Editor.
+          </p>
+          <Link className="btn btn-outline btn-primary" to="/installs/install">
+            <HardDriveDownloadIcon size={16} />
+            Install Editor
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <ul className="flex flex-col gap-4">
+        {installs.map((install) => (
+          <li key={install.id}>
+            <InstallCard install={install} />
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center gap-2">
@@ -82,31 +113,7 @@ export default function InstallsListPage() {
           </Link>
         </div>
       </div>
-      <div>
-        {installs?.length ? (
-          <ul className="flex flex-col gap-4">
-            {installs.map((install) => (
-              <li key={install.id}>
-                <InstallCard install={install} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="flex flex-col items-center gap-2 py-32 text-sm">
-            <h2 className="font-semibold">No installs</h2>
-            <p className="text-neutral-400">
-              To get started, install a version of Godot Editor.
-            </p>
-            <Link
-              className="btn btn-outline btn-primary"
-              to="/installs/install"
-            >
-              <HardDriveDownloadIcon size={16} />
-              Install Editor
-            </Link>
-          </div>
-        )}
-      </div>
+      <div>{renderInstalls()}</div>
     </div>
   );
 }
