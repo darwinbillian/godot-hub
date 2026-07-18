@@ -35,7 +35,7 @@ pub fn run() {
             let _ = window.set_focus();
         }))
         .setup(|app| {
-            let local_data_dir = app.path().local_data_dir()?.join("Godot Hub");
+            let local_data_dir = app.path().local_data_dir()?.join("godot-hub");
 
             let client = ClientBuilder::new(Client::new())
                 .with(Cache(HttpCache {
