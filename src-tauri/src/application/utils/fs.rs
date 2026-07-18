@@ -6,6 +6,33 @@ use std::{
 use anyhow::Result;
 use tokio::fs::File;
 
+pub struct DirectoryGuard {
+    path: Option<PathBuf>,
+}
+
+impl DirectoryGuard {
+    pub async fn create<P>(path: P) -> Result<Self>
+    where
+        P: Into<PathBuf>,
+    {
+        let path = path.into();
+        tokio::fs::create_dir_all(&path).await?;
+        Ok(Self { path: Some(path) })
+    }
+
+    pub fn disarm(&mut self) {
+        self.path.take();
+    }
+}
+
+impl Drop for DirectoryGuard {
+    fn drop(&mut self) {
+        if let Some(path) = self.path.take() {
+            let _ = std::fs::remove_dir_all(path);
+        }
+    }
+}
+
 pub struct FileGuard {
     file: Option<File>,
     path: Option<PathBuf>,

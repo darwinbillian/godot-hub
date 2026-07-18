@@ -9,10 +9,13 @@ use anyhow::Result;
 use thiserror::Error;
 use tokio_stream::StreamExt;
 
-use crate::application::services::{
-    download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
-    installation::{Installation, InstallationService, InstallationTransaction},
-    task::{TaskController, TaskError},
+use crate::application::{
+    services::{
+        download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
+        installation::{Installation, InstallationService, InstallationTransaction},
+        task::{TaskController, TaskError},
+    },
+    utils::fs::DirectoryGuard,
 };
 
 pub struct InstallerService {
@@ -75,10 +78,14 @@ impl Installer {
             &platform,
         );
 
+        let mut dir = DirectoryGuard::create(transaction.dir()).await?;
+
         let download_path = self.download(controller, &slug, &platform).await?;
         self.extract(controller, &transaction, &download_path)
             .await?;
         let installation = self.finalize(controller, transaction).await?;
+
+        dir.disarm();
 
         Ok(installation)
     }
