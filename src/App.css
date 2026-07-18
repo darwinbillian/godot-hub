@@ -15,10 +15,12 @@
 
 @layer components {
   .btn {
-    @apply inline-flex cursor-pointer items-center gap-1 rounded px-2 py-1 font-semibold transition disabled:pointer-events-none;
+    @apply inline-flex cursor-pointer items-center gap-1 rounded border px-2 py-0.5 font-semibold transition disabled:pointer-events-none;
 
     --btn-bg: var(--btn-color, var(--color-neutral-800));
     --btn-hover-bg: var(--btn-hover-color, var(--color-neutral-700));
+    --btn-border: transparent;
+    --btn-hover-border: transparent;
     --btn-fg: var(--color-neutral-200);
     background-color: var(--btn-bg);
     border-color: var(--btn-border);
@@ -32,8 +34,6 @@
   }
 
   .btn-outline {
-    @apply border;
-
     --btn-bg: transparent;
     --btn-hover-bg: color-mix(in oklab, var(--btn-color) 10%, transparent);
     --btn-border: var(--btn-color, var(--color-neutral-700));
@@ -83,7 +83,7 @@
       @apply flex flex-col;
 
       > * {
-        @apply flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition hover:bg-white/10;
+        @apply flex cursor-pointer items-center gap-2 rounded border border-transparent px-2 py-0.5 transition hover:bg-white/10;
       }
     }
   }
