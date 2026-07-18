@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::Result;
+use thiserror::Error;
 use tokio_stream::StreamExt;
 
 use crate::application::services::{
@@ -39,6 +40,12 @@ pub enum InstallerProgress {
     Downloading(DownloadProgress),
     Extracting,
     Finalizing,
+}
+
+#[derive(Error, Debug)]
+pub enum InstallerError {
+    #[error("platform '{os}-{arch}' is not supported")]
+    PlatformNotSupported { arch: String, os: String },
 }
 
 struct InstallerServiceInner {
@@ -76,23 +83,41 @@ impl Installer {
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
     ) -> Result<Installation, TaskError> {
+        let (slug, platform) = self.get_slug_and_platform()?;
+
         let transaction = self
             .installation_service
             .create(&self.id, &self.version, &self.flavor);
-        let download_path = self.download(controller).await?;
+
+        let download_path = self.download(controller, &slug, &platform).await?;
         self.extract(controller, &transaction, &download_path)
             .await?;
         let installation = self.finalize(controller, transaction).await?;
+
         Ok(installation)
+    }
+
+    fn get_slug_and_platform(&self) -> Result<(String, String)> {
+        let (slug, platform) = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("windows", "x86_64") => ("win64.exe.zip", "windows.64"),
+            (os, arch) => {
+                return Err(anyhow::anyhow!(InstallerError::PlatformNotSupported {
+                    arch: arch.to_owned(),
+                    os: os.to_owned(),
+                }))
+            }
+        };
+
+        Ok((slug.to_owned(), platform.to_owned()))
     }
 
     async fn download(
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
+        slug: &str,
+        platform: &str,
     ) -> Result<PathBuf, TaskError> {
-        let request =
-            DownloadRequest::new(&self.version, &self.flavor, "win64.exe.zip", "windows.64");
-
+        let request = DownloadRequest::new(&self.version, &self.flavor, slug, platform);
         let mut handle = self
             .download_service
             .download(request, controller.cancellation_token().clone())
