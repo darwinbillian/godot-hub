@@ -20,6 +20,7 @@ pub struct Installation {
     pub id: String,
     pub version: String,
     pub flavor: String,
+    pub platform: String,
     pub executable: String,
 }
 
@@ -27,6 +28,7 @@ pub struct InstallationTransaction {
     dir: PathBuf,
     id: String,
     version: String,
+    platform: String,
     flavor: String,
 }
 
@@ -41,6 +43,7 @@ pub struct InstallationHandle {
 pub struct InstallationMetadata {
     pub version: String,
     pub flavor: String,
+    pub platform: String,
     pub executable: String,
 }
 
@@ -67,12 +70,19 @@ impl InstallationService {
         &self.inner.remove_event
     }
 
-    pub fn create(&self, id: &str, version: &str, flavor: &str) -> InstallationTransaction {
+    pub fn create(
+        &self,
+        id: &str,
+        version: &str,
+        flavor: &str,
+        platform: &str,
+    ) -> InstallationTransaction {
         InstallationTransaction {
             dir: self.inner.dir.join(id),
             id: id.to_owned(),
             version: version.to_owned(),
             flavor: flavor.to_owned(),
+            platform: platform.to_owned(),
         }
     }
 
@@ -106,6 +116,7 @@ impl InstallationService {
                 id,
                 version: metadata.version,
                 flavor: metadata.flavor,
+                platform: metadata.platform,
                 executable: metadata.executable,
             };
 
@@ -175,6 +186,7 @@ impl InstallationTransaction {
             id: self.id,
             version: self.version,
             flavor: self.flavor,
+            platform: self.platform,
             executable: executable.to_owned(),
         };
 
@@ -216,6 +228,7 @@ where
         Self {
             version: value.version.clone(),
             flavor: value.flavor.clone(),
+            platform: value.platform.clone(),
             executable: value.executable.clone(),
         }
     }

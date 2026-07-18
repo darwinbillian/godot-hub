@@ -85,9 +85,9 @@ impl Installer {
     ) -> Result<Installation, TaskError> {
         let (slug, platform) = self.get_slug_and_platform()?;
 
-        let transaction = self
-            .installation_service
-            .create(&self.id, &self.version, &self.flavor);
+        let transaction =
+            self.installation_service
+                .create(&self.id, &self.version, &self.flavor, &platform);
 
         let download_path = self.download(controller, &slug, &platform).await?;
         self.extract(controller, &transaction, &download_path)
