@@ -15,7 +15,7 @@ use crate::application::{
         installation::{Installation, InstallationService, InstallationTransaction},
         task::{TaskController, TaskError},
     },
-    utils::fs::DirectoryGuard,
+    utils::{fs::DirectoryGuard, zip::ZipFile},
 };
 
 pub struct InstallerService {
@@ -139,7 +139,8 @@ impl Installer {
         download_path: &Path,
     ) -> Result<()> {
         controller.report(InstallerProgress::Extracting);
-        crate::application::utils::zip::extract(download_path, &transaction.dir()).await?;
+        let archive = ZipFile::open(download_path).await?;
+        archive.extract(transaction.dir()).await?;
         Ok(())
     }
 
