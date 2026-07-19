@@ -17,6 +17,7 @@ export type InstallStatus =
 export type InstallProgress =
   | { type: "starting" }
   | { type: "downloading"; progress: DownloadProgress }
+  | { type: "verifying" }
   | { type: "extracting" }
   | { type: "finalizing" };
 

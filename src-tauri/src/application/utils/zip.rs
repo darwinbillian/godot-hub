@@ -46,4 +46,12 @@ impl ZipFile {
 
         Ok(())
     }
+
+    pub fn file_names(&self) -> Vec<String> {
+        let archive = self.archive.lock().unwrap();
+        archive
+            .file_names()
+            .map(|file_name| file_name.to_owned())
+            .collect()
+    }
 }

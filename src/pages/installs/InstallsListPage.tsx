@@ -196,6 +196,11 @@ function InstallCardBody({ install }: { install: Install }) {
           pausedText: <>Download paused ({Math.floor(percentage * 100)}%)</>,
           percentage: percentage,
         };
+      case "verifying":
+        return {
+          text: <>Verifying...</>,
+          percentage: 1,
+        };
       case "extracting":
         return {
           text: <>Extracting...</>,

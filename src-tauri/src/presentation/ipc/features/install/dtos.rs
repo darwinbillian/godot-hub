@@ -157,6 +157,7 @@ where
 pub enum InstallerProgressDto {
     Starting,
     Downloading { progress: DownloadProgressDto },
+    Verifying,
     Extracting,
     Finalizing,
 }
@@ -172,6 +173,7 @@ where
             InstallerProgress::Downloading(progress) => Self::Downloading {
                 progress: progress.into(),
             },
+            InstallerProgress::Verifying => Self::Verifying,
             InstallerProgress::Extracting => Self::Extracting,
             InstallerProgress::Finalizing => Self::Finalizing,
         }

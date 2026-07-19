@@ -81,27 +81,14 @@ impl Installer {
         let mut dir = DirectoryGuard::create(transaction.dir()).await?;
 
         let download_path = self.download(controller, &slug, &platform).await?;
+        let executable = self.verify(controller, &slug, &download_path).await?;
         self.extract(controller, &transaction, &download_path)
             .await?;
-        let installation = self.finalize(controller, transaction).await?;
+        let installation = self.finalize(controller, transaction, &executable).await?;
 
         dir.disarm();
 
         Ok(installation)
-    }
-
-    fn get_slug_and_platform(&self) -> Result<(String, String)> {
-        let (slug, platform) = match (std::env::consts::OS, std::env::consts::ARCH) {
-            ("windows", "x86_64") => ("win64.exe.zip", "windows.64"),
-            (os, arch) => {
-                return Err(anyhow::anyhow!(InstallerError::PlatformNotSupported {
-                    arch: arch.to_owned(),
-                    os: os.to_owned(),
-                }))
-            }
-        };
-
-        Ok((slug.to_owned(), platform.to_owned()))
     }
 
     async fn download(
@@ -132,6 +119,17 @@ impl Installer {
         Ok(handle.path)
     }
 
+    async fn verify(
+        &self,
+        controller: &TaskController<InstallerState, InstallerProgress, Installation>,
+        slug: &str,
+        download_path: &Path,
+    ) -> Result<String> {
+        controller.report(InstallerProgress::Verifying);
+        let executable = self.find_executable(slug, download_path).await?;
+        Ok(executable)
+    }
+
     async fn extract(
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
@@ -148,11 +146,55 @@ impl Installer {
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
         transaction: InstallationTransaction,
+        executable: &str,
     ) -> Result<Installation> {
         controller.report(InstallerProgress::Finalizing);
-        let executable = format!("Godot_v{}-{}_win64.exe", self.version, self.flavor);
-        let installation = transaction.commit(&executable).await?;
+        let installation = transaction.commit(executable).await?;
         Ok(installation)
+    }
+
+    fn get_slug_and_platform(&self) -> Result<(String, String)> {
+        let (slug, platform) = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("windows", "x86_64") => ("win64.exe.zip", "windows.64"),
+            (os, arch) => {
+                return Err(anyhow::anyhow!(InstallerError::PlatformNotSupported {
+                    arch: arch.to_owned(),
+                    os: os.to_owned(),
+                }))
+            }
+        };
+
+        Ok((slug.to_owned(), platform.to_owned()))
+    }
+
+    async fn find_executable(&self, slug: &str, download_path: &Path) -> Result<String> {
+        let archive = ZipFile::open(download_path).await?;
+
+        let executable = archive
+            .file_names()
+            .into_iter()
+            .max_by_key(|file_name| {
+                let mut score = 0;
+                if file_name.contains("Godot") {
+                    score += 1;
+                }
+                if file_name.contains(&self.version) {
+                    score += 1;
+                }
+                if file_name.contains(&self.flavor) {
+                    score += 1;
+                }
+                if file_name.contains(slug.strip_suffix(".zip").unwrap_or(slug)) {
+                    score += 5;
+                }
+                if file_name.contains("console") {
+                    score -= 1;
+                }
+                score
+            })
+            .ok_or(InstallerError::ExecutableNotFound)?;
+
+        Ok(executable)
     }
 }
 
@@ -183,6 +225,7 @@ pub enum InstallerProgress {
     #[default]
     Starting,
     Downloading(DownloadProgress),
+    Verifying,
     Extracting,
     Finalizing,
 }
@@ -191,4 +234,6 @@ pub enum InstallerProgress {
 pub enum InstallerError {
     #[error("platform '{os}-{arch}' is not supported")]
     PlatformNotSupported { arch: String, os: String },
+    #[error("executable not found")]
+    ExecutableNotFound,
 }
