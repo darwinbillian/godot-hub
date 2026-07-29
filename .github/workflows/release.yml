@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "lts/*"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run tauri build
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.value }}"
+          release_dir="./src-tauri/target/release"
+          mv "$release_dir/bundle/nsis/Godot Hub_${version}_x64-setup.exe" "$release_dir/bundle/nsis/godot-hub-$version-x86_64-pc-windows-msvc.exe"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: |
+            src-tauri/target/release/bundle/nsis/godot-hub-${{ steps.version.outputs.value }}-x86_64-pc-windows-msvc.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          skip-decompress: true
+
+      - name: Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: "**/*"
