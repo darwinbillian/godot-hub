@@ -1,10 +1,16 @@
+use std::str::FromStr;
+
 use anyhow::{Error, Result};
 use tokio_stream::StreamExt;
 
 use super::client::GodotWebsiteClient;
-use crate::application::services::{
-    download::{DownloadProvider, DownloadRequest, DownloadResponse},
-    release::{ReleaseMetadata, ReleaseProvider},
+use crate::{
+    application::services::{
+        download::{DownloadProvider, DownloadRequest, DownloadResponse},
+        installer::{DownloadConfigsProvider, InstallerError},
+        release::{ReleaseMetadata, ReleaseProvider},
+    },
+    domain::models::version::Version,
 };
 
 pub struct GodotWebsiteReleaseProvider {
@@ -33,6 +39,36 @@ impl ReleaseProvider for GodotWebsiteReleaseProvider {
                 ),
             })
             .collect())
+    }
+}
+
+pub struct GodotWebsiteDownloadConfigsProvider {
+    client: GodotWebsiteClient,
+}
+
+impl GodotWebsiteDownloadConfigsProvider {
+    pub fn new(client: GodotWebsiteClient) -> Self {
+        Self { client }
+    }
+}
+
+#[async_trait::async_trait]
+impl DownloadConfigsProvider for GodotWebsiteDownloadConfigsProvider {
+    async fn get_slug(&self, version: &str, _flavor: &str, platform: &str) -> Result<String> {
+        let version = Version::from_str(version)?;
+        let download_configs = self.client.list_download_configs().await?;
+        let config = download_configs
+            .defaults
+            .get(&version.major.to_string())
+            .ok_or_else(|| InstallerError::VersionNotAvailable(version.clone()))?;
+        let editor = config
+            .editor
+            .as_ref()
+            .ok_or_else(|| InstallerError::VersionNotAvailable(version.clone()))?;
+        let slug = editor
+            .get(platform)
+            .ok_or_else(|| InstallerError::VersionNotAvailable(version.clone()))?;
+        Ok(slug.to_owned())
     }
 }
 

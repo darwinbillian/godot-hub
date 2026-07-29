@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::Deserialize;
 
 #[allow(dead_code)]
@@ -18,4 +20,36 @@ pub struct VersionReleaseDto {
     pub release_date: String,
     pub release_notes: String,
     pub release_version: Option<String>,
+}
+
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+pub struct DownloadConfigsDto {
+    pub defaults: HashMap<String, DownloadConfigsItemWithMonoDto>,
+    pub overrides: Vec<DownloadConfigsOverrideDto>,
+}
+
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+pub struct DownloadConfigsOverrideDto {
+    pub version: String,
+    pub range: Vec<String>,
+    pub config: DownloadConfigsItemDto,
+}
+
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+pub struct DownloadConfigsItemWithMonoDto {
+    pub templates: Option<String>,
+    pub editor: Option<HashMap<String, String>>,
+    pub extras: Option<HashMap<String, String>>,
+    pub mono: Option<DownloadConfigsItemDto>,
+}
+
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+pub struct DownloadConfigsItemDto {
+    pub templates: Option<String>,
+    pub editor: Option<HashMap<String, String>>,
+    pub extras: Option<HashMap<String, String>>,
 }

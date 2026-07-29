@@ -1,4 +1,5 @@
 mod application;
+mod domain;
 mod infrastructure;
 mod presentation;
 mod state;
@@ -17,7 +18,10 @@ use crate::{
     },
     infrastructure::godot_website::{
         client::GodotWebsiteClient,
-        providers::{GodotWebsiteDownloadProvider, GodotWebsiteReleaseProvider},
+        providers::{
+            GodotWebsiteDownloadConfigsProvider, GodotWebsiteDownloadProvider,
+            GodotWebsiteReleaseProvider,
+        },
     },
     presentation::ipc::features::install::events::{
         InstallAddEventEmitter, InstallRemoveEventEmitter, InstallUpdateEventEmitter,
@@ -47,19 +51,26 @@ pub fn run() {
 
             let godot_website = GodotWebsiteClient::new(client);
 
-            let release_provider =
-                Arc::new(GodotWebsiteReleaseProvider::new(godot_website.clone()));
-
             let download_provider =
                 Arc::new(GodotWebsiteDownloadProvider::new(godot_website.clone()));
+
+            let download_configs_providers = Arc::new(GodotWebsiteDownloadConfigsProvider::new(
+                godot_website.clone(),
+            ));
+
+            let release_provider =
+                Arc::new(GodotWebsiteReleaseProvider::new(godot_website.clone()));
 
             let download_service =
                 DownloadService::new(download_provider, &local_data_dir.join("downloads"));
 
             let installation_service = InstallationService::new(&local_data_dir.join("installs"));
 
-            let installer_service =
-                InstallerService::new(download_service, installation_service.clone());
+            let installer_service = InstallerService::new(
+                download_service,
+                installation_service.clone(),
+                download_configs_providers,
+            );
 
             let task_service = TaskService::new();
 

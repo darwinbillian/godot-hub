@@ -3,6 +3,8 @@ use http_cache_reqwest::CacheMode;
 use reqwest::Response;
 use reqwest_middleware::ClientWithMiddleware;
 
+use crate::infrastructure::godot_website::dtos::DownloadConfigsDto;
+
 use super::dtos::VersionDto;
 
 #[derive(Clone)]
@@ -13,6 +15,16 @@ pub struct GodotWebsiteClient {
 impl GodotWebsiteClient {
     pub fn new(client: ClientWithMiddleware) -> Self {
         Self { client }
+    }
+
+    pub async fn list_download_configs(&self) -> Result<DownloadConfigsDto> {
+        let request = self.client.get(
+            "https://raw.githubusercontent.com/godotengine/godot-website/master/_data/download_configs.yml",
+        );
+        let response = request.send().await?.error_for_status()?;
+        let bytes = response.bytes().await?;
+        let versions = yaml_serde::from_slice::<DownloadConfigsDto>(&bytes)?;
+        Ok(versions)
     }
 
     pub async fn list_versions(&self) -> Result<Vec<VersionDto>> {

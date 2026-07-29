@@ -9,14 +9,22 @@ use anyhow::Result;
 use thiserror::Error;
 use tokio_stream::StreamExt;
 
-use crate::application::{
-    services::{
-        download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
-        installation::{Installation, InstallationService, InstallationTransaction},
-        task::{TaskController, TaskError},
+use crate::{
+    application::{
+        services::{
+            download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
+            installation::{Installation, InstallationService, InstallationTransaction},
+            task::{TaskController, TaskError},
+        },
+        utils::{fs::DirectoryGuard, zip::ZipFile},
     },
-    utils::{fs::DirectoryGuard, zip::ZipFile},
+    domain::models::version::Version,
 };
+
+#[async_trait::async_trait]
+pub trait DownloadConfigsProvider {
+    async fn get_slug(&self, version: &str, flavor: &str, platform: &str) -> Result<String>;
+}
 
 pub struct InstallerService {
     inner: Arc<InstallerServiceInner>,
@@ -25,17 +33,20 @@ pub struct InstallerService {
 struct InstallerServiceInner {
     download_service: DownloadService,
     installation_service: InstallationService,
+    download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
 }
 
 impl InstallerService {
     pub fn new(
         download_service: DownloadService,
         installation_service: InstallationService,
+        download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     ) -> Self {
         Self {
             inner: Arc::new(InstallerServiceInner {
                 download_service,
                 installation_service,
+                download_configs_provider,
             }),
         }
     }
@@ -46,6 +57,7 @@ impl InstallerService {
         Installer {
             download_service: self.inner.download_service.clone(),
             installation_service: self.inner.installation_service.clone(),
+            download_configs_provider: self.inner.download_configs_provider.clone(),
             id,
             name,
             version: version.to_owned(),
@@ -57,6 +69,7 @@ impl InstallerService {
 pub struct Installer {
     download_service: DownloadService,
     installation_service: InstallationService,
+    download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     id: String,
     name: String,
     version: String,
@@ -68,7 +81,11 @@ impl Installer {
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
     ) -> Result<Installation, TaskError> {
-        let (slug, platform) = self.get_slug_and_platform()?;
+        let platform = self.get_platform()?;
+        let slug = self
+            .download_configs_provider
+            .get_slug(&self.version, &self.flavor, &platform)
+            .await?;
 
         let transaction = self.installation_service.create(
             &self.id,
@@ -153,9 +170,9 @@ impl Installer {
         Ok(installation)
     }
 
-    fn get_slug_and_platform(&self) -> Result<(String, String)> {
-        let (slug, platform) = match (std::env::consts::OS, std::env::consts::ARCH) {
-            ("windows", "x86_64") => ("win64.exe.zip", "windows.64"),
+    fn get_platform(&self) -> Result<String> {
+        let platform = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("windows", "x86_64") => "windows.64",
             (os, arch) => {
                 return Err(anyhow::anyhow!(InstallerError::PlatformNotSupported {
                     arch: arch.to_owned(),
@@ -164,7 +181,7 @@ impl Installer {
             }
         };
 
-        Ok((slug.to_owned(), platform.to_owned()))
+        Ok(platform.to_owned())
     }
 
     async fn find_executable(&self, slug: &str, download_path: &Path) -> Result<String> {
@@ -232,8 +249,10 @@ pub enum InstallerProgress {
 
 #[derive(Error, Debug)]
 pub enum InstallerError {
-    #[error("platform '{os}-{arch}' is not supported")]
-    PlatformNotSupported { arch: String, os: String },
     #[error("executable not found")]
     ExecutableNotFound,
+    #[error("platform '{os}-{arch}' is not supported")]
+    PlatformNotSupported { arch: String, os: String },
+    #[error("version '{0}' is not available")]
+    VersionNotAvailable(Version),
 }
