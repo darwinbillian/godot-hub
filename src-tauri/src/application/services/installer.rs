@@ -172,6 +172,7 @@ impl Installer {
 
     fn get_platform(&self) -> Result<String> {
         let platform = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("linux", "x86_64") => "linux.64",
             ("windows", "x86_64") => "windows.64",
             (os, arch) => {
                 return Err(anyhow::anyhow!(InstallerError::PlatformNotSupported {

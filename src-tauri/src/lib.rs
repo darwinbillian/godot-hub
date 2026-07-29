@@ -40,11 +40,16 @@ pub fn run() {
         }))
         .setup(|app| {
             let local_data_dir = app.path().local_data_dir()?.join("godot-hub");
+            let cache_dir = if cfg!(target_os = "windows") {
+                local_data_dir.join("cache")
+            } else {
+                app.path().cache_dir()?.join("godot-hub")
+            };
 
             let client = ClientBuilder::new(Client::new())
                 .with(Cache(HttpCache {
                     mode: CacheMode::Default,
-                    manager: CACacheManager::new(local_data_dir.join("cache"), false),
+                    manager: CACacheManager::new(cache_dir, false),
                     options: HttpCacheOptions::default(),
                 }))
                 .build();
