@@ -10,13 +10,29 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install dependencies (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Restore cache
         uses: swatinem/rust-cache@v2
@@ -33,26 +49,63 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run tauri build
+        run: npm run tauri -- build --target ${{ matrix.target }}
 
       - name: Get version
         id: version
         shell: bash
         run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Prepare artifact
+      - name: Prepare artifacts (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          version="${{ steps.version.outputs.value }}"
+          target="${{ matrix.target }}"
+          release_dir="./src-tauri/target/$target/release"
+          mv "$release_dir/bundle/deb/Godot Hub_${version}_amd64.deb" "$release_dir/bundle/deb/godot-hub_${version}_amd64.deb"
+          mv "$release_dir/bundle/rpm/Godot Hub-${version}-1.x86_64.rpm" "$release_dir/bundle/rpm/godot-hub-$version-1.x86_64.rpm"
+          mv "$release_dir/bundle/appimage/Godot Hub_${version}_amd64.AppImage" "$release_dir/bundle/appimage/godot-hub-$version-$target.AppImage"
+
+      - name: Prepare artifact (Windows)
+        if: matrix.platform == 'windows-latest'
         shell: bash
         run: |
           version="${{ steps.version.outputs.value }}"
-          release_dir="./src-tauri/target/release"
-          mv "$release_dir/bundle/nsis/Godot Hub_${version}_x64-setup.exe" "$release_dir/bundle/nsis/godot-hub-$version-x86_64-pc-windows-msvc.exe"
+          target="${{ matrix.target }}"
+          release_dir="./src-tauri/target/$target/release"
+          mv "$release_dir/bundle/nsis/Godot Hub_${version}_x64-setup.exe" "$release_dir/bundle/nsis/godot-hub-$version-$target.exe"
 
-      - name: Upload artifact
+      - name: Upload artifact (DEB)
+        if: matrix.platform == 'ubuntu-22.04'
         uses: actions/upload-artifact@v7
         with:
           archive: false
           path: |
-            src-tauri/target/release/bundle/nsis/godot-hub-${{ steps.version.outputs.value }}-x86_64-pc-windows-msvc.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/deb/godot-hub_${{ steps.version.outputs.value }}_amd64.deb
+
+      - name: Upload artifact (RPM)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/godot-hub-${{ steps.version.outputs.value }}-1.x86_64.rpm
+
+      - name: Upload artifact (AppImage)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/godot-hub-${{ steps.version.outputs.value }}-${{ matrix.target }}.AppImage
+
+      - name: Upload artifact (NSIS)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/godot-hub-${{ steps.version.outputs.value }}-${{ matrix.target }}.exe
 
   release:
     needs: build
