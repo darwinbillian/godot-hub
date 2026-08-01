@@ -182,22 +182,14 @@ impl Installer {
             .file_names()
             .into_iter()
             .max_by_key(|file_name| {
+                let file_name = file_name.rsplit("/").next().unwrap();
+
                 let mut score = 0;
-                if file_name.contains("Godot") {
-                    score += 1;
-                }
-                if file_name.contains(&self.version) {
-                    score += 1;
-                }
-                if file_name.contains(&self.flavor) {
-                    score += 1;
-                }
-                if file_name.contains(slug.strip_suffix(".zip").unwrap_or(slug)) {
-                    score += 5;
-                }
-                if file_name.contains("console") {
-                    score -= 1;
-                }
+                score += file_name.contains("Godot") as i32;
+                score += file_name.contains(&self.version) as i32;
+                score += file_name.contains(&self.flavor) as i32;
+                score += file_name.contains(slug.strip_suffix(".zip").unwrap_or(slug)) as i32 * 5;
+                score -= file_name.contains("console") as i32;
                 score
             })
             .ok_or(InstallerError::ExecutableNotFound)?;
