@@ -76,7 +76,7 @@ export default function InstallsInstallPage() {
     return (
       <ul className="flex flex-col gap-4">
         {releases.map((release) => (
-          <li key={release.name}>
+          <li key={release.version}>
             <ReleaseCard release={release} />
           </li>
         ))}
@@ -104,7 +104,7 @@ const ReleaseCard = memo(({ release }: { release: Release }) => {
         <img className="size-8" src="/icon.svg" />
       </div>
       <div className="flex-1">
-        <h2 className="font-semibold">Godot {release.name}</h2>
+        <h2 className="font-semibold">{release.name}</h2>
       </div>
       <div>
         <ReleaseCardActions release={release} />
@@ -171,7 +171,7 @@ function ReleaseCardActions({ release }: { release: Release }) {
             <button
               className="btn btn-primary"
               onClick={() => {
-                install(release.name, release.flavor)
+                install(release.version, release.flavor)
                   .then(() => navigate("/installs"))
                   .catch((e) => console.error(e));
               }}

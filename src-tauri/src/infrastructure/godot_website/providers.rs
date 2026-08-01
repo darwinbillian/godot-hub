@@ -35,7 +35,7 @@ impl ReleaseProvider for GodotWebsiteReleaseProvider {
             .into_iter()
             .filter(|version| version.flavor == "stable")
             .map(|version| ReleaseMetadata {
-                name: version.name,
+                version: version.name,
                 flavor: version.flavor,
                 release_notes: format!(
                     "https://godotengine.org/{}",

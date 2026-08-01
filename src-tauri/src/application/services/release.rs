@@ -43,15 +43,17 @@ impl ReleaseService {
         Ok(releases
             .into_iter()
             .map(|release| {
-                let key = (release.name.clone(), release.flavor.clone());
+                let key = (release.version.clone(), release.flavor.clone());
+                let name = format!("Godot {}", release.version);
                 let status =
-                    match download_configs.get_slug(&release.name, &release.flavor, &platform) {
+                    match download_configs.get_slug(&release.version, &release.flavor, &platform) {
                         Ok(_) => ReleaseStatus::Available,
                         Err(_) => ReleaseStatus::Unavailable,
                     };
 
                 Release {
-                    name: release.name,
+                    name,
+                    version: release.version,
                     flavor: release.flavor,
                     release_notes: release.release_notes,
                     status,
@@ -72,6 +74,7 @@ impl ReleaseService {
 
 pub struct Release {
     pub name: String,
+    pub version: String,
     pub flavor: String,
     pub release_notes: String,
     pub status: ReleaseStatus,

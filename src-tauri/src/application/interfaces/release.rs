@@ -6,7 +6,7 @@ pub trait ReleaseProvider {
 }
 
 pub struct ReleaseMetadata {
-    pub name: String,
+    pub version: String,
     pub flavor: String,
     pub release_notes: String,
 }
