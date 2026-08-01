@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "linux": {
+      "deb": {
+        "desktopTemplate": "./bundle/main.desktop"
+      },
+      "rpm": {
+        "desktopTemplate": "./bundle/main.desktop"
+      }
+    }
+  }
+}

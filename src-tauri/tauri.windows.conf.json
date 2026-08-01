@@ -3,7 +3,7 @@
     "targets": "nsis",
     "windows": {
       "nsis": {
-        "template": "./installer.nsi"
+        "template": "./bundle/installer.nsi"
       }
     }
   }
