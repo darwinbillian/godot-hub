@@ -1,3 +1,4 @@
+import { SearchBox } from "@/components/SearchBox";
 import { install, resume } from "@/lib/ipc/features/install/commands";
 import {
   addEvent,
@@ -18,6 +19,7 @@ import { Link, useNavigate } from "react-router";
 
 export default function InstallsInstallPage() {
   const [releases, setReleases] = useState<Release[]>();
+  const [search, setSearch] = useState("");
 
   const updateReleases = () => {
     list()
@@ -73,9 +75,33 @@ export default function InstallsInstallPage() {
       return null;
     }
 
+    const filteredReleases = releases.filter((release) =>
+      release.name.toLowerCase().includes(search.toLowerCase()),
+    );
+
+    if (!filteredReleases?.length) {
+      return (
+        <div className="flex flex-col items-center gap-2 py-32 text-sm">
+          <h2 className="font-semibold">No results</h2>
+          <p className="text-neutral-400">
+            Try adjusting your search term or clearing your current search to
+            see all installs.
+          </p>
+          <button
+            className="btn btn-outline"
+            onClick={() => {
+              setSearch("");
+            }}
+          >
+            Clear all
+          </button>
+        </div>
+      );
+    }
+
     return (
       <ul className="flex flex-col gap-4">
-        {releases.map((release) => (
+        {filteredReleases.map((release) => (
           <li key={release.version}>
             <ReleaseCard release={release} />
           </li>
@@ -87,10 +113,21 @@ export default function InstallsInstallPage() {
   return (
     <div className="flex flex-col gap-8 p-8">
       <div className="flex items-center gap-2">
-        <Link className="btn btn-ghost p-1" to="/installs">
-          <ArrowLeftIcon size={20} />
-        </Link>
-        <h1 className="text-2xl font-semibold">Install Godot Editor</h1>
+        <div className="flex flex-1 items-center gap-2">
+          <Link className="btn btn-ghost p-1" to="/installs">
+            <ArrowLeftIcon size={20} />
+          </Link>
+          <h1 className="text-2xl font-semibold">Install Godot Editor</h1>
+        </div>
+        <div>
+          <SearchBox
+            className="input w-50"
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+            }}
+          />
+        </div>
       </div>
       <div>{renderReleases()}</div>
     </div>
