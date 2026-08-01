@@ -11,8 +11,9 @@ use tokio_stream::StreamExt;
 
 use crate::{
     application::{
+        interfaces::{download::DownloadRequest, download_configs::DownloadConfigsProvider},
         services::{
-            download::{DownloadProgress, DownloadRequest, DownloadService, DownloadStatus},
+            download::{DownloadProgress, DownloadService, DownloadStatus},
             installation::{Installation, InstallationService, InstallationTransaction},
             task::{TaskController, TaskError},
         },
@@ -20,15 +21,6 @@ use crate::{
     },
     domain::models::version::Version,
 };
-
-#[async_trait::async_trait]
-pub trait DownloadConfigsProvider {
-    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs>>;
-}
-
-pub trait DownloadConfigs {
-    fn get_slug(&self, version: &str, flavor: &str, platform: &str) -> Result<String>;
-}
 
 pub struct InstallerService {
     inner: Arc<InstallerServiceInner>,

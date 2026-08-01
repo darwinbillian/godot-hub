@@ -2,12 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
 
-use crate::application::services::install::{Install, InstallService};
-
-#[async_trait::async_trait]
-pub trait ReleaseProvider {
-    async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>>;
-}
+use crate::application::{
+    interfaces::release::ReleaseProvider,
+    services::install::{Install, InstallService},
+};
 
 pub struct ReleaseService {
     release_provider: Arc<dyn ReleaseProvider + Send + Sync>,
@@ -58,12 +56,6 @@ pub struct Release {
     pub release_notes: String,
     pub status: ReleaseStatus,
     pub install: Option<Install>,
-}
-
-pub struct ReleaseMetadata {
-    pub name: String,
-    pub flavor: String,
-    pub release_notes: String,
 }
 
 pub enum ReleaseStatus {

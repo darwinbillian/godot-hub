@@ -5,10 +5,13 @@ use tokio_stream::StreamExt;
 
 use super::client::GodotWebsiteClient;
 use crate::{
-    application::services::{
-        download::{DownloadProvider, DownloadRequest, DownloadResponse},
-        installer::{DownloadConfigs, DownloadConfigsProvider, InstallerError},
-        release::{ReleaseMetadata, ReleaseProvider},
+    application::{
+        interfaces::{
+            download::{DownloadProvider, DownloadRequest, DownloadResponse},
+            download_configs::{DownloadConfigs, DownloadConfigsProvider},
+            release::{ReleaseMetadata, ReleaseProvider},
+        },
+        services::installer::InstallerError,
     },
     domain::models::version::Version,
     infrastructure::godot_website::dtos::DownloadConfigsDto,

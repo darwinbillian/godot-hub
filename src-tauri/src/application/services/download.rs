@@ -5,22 +5,17 @@ use std::{
 };
 
 use anyhow::Result;
-use bytes::Bytes;
 use tokio::io::AsyncWriteExt;
 use tokio_stream::{Stream, StreamExt};
 
 use crate::application::{
+    interfaces::download::{DownloadProvider, DownloadRequest, DownloadResponse},
     services::task::TaskError,
     utils::{
         fs::FileGuard,
         sync::{CancellationToken, CancellationTokenExt},
     },
 };
-
-#[async_trait::async_trait]
-pub trait DownloadProvider {
-    async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse>;
-}
 
 #[derive(Clone)]
 pub struct DownloadService {
@@ -114,29 +109,6 @@ impl DownloadService {
 
         Ok(stream)
     }
-}
-
-pub struct DownloadRequest {
-    pub version: String,
-    pub flavor: String,
-    pub slug: String,
-    pub platform: String,
-}
-
-impl DownloadRequest {
-    pub fn new(version: &str, flavor: &str, slug: &str, platform: &str) -> Self {
-        Self {
-            version: version.to_owned(),
-            flavor: flavor.to_owned(),
-            slug: slug.to_owned(),
-            platform: platform.to_owned(),
-        }
-    }
-}
-
-pub struct DownloadResponse {
-    pub stream: Pin<Box<dyn Stream<Item = Result<Bytes>> + Send>>,
-    pub size: Option<u64>,
 }
 
 pub struct DownloadHandle {
