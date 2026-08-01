@@ -14,7 +14,8 @@ use tauri::Manager;
 use crate::{
     application::services::{
         download::DownloadService, install::InstallService, installation::InstallationService,
-        installer::InstallerService, release::ReleaseService, task::TaskService,
+        installer::InstallerService, platform::PlatformService, release::ReleaseService,
+        task::TaskService,
     },
     infrastructure::godot_website::{
         client::GodotWebsiteClient,
@@ -66,6 +67,8 @@ pub fn run() {
             let release_provider =
                 Arc::new(GodotWebsiteReleaseProvider::new(godot_website.clone()));
 
+            let platform_service = PlatformService::new();
+
             let download_service =
                 DownloadService::new(download_provider, &local_data_dir.join("downloads"));
 
@@ -75,6 +78,7 @@ pub fn run() {
                 download_configs_provider,
                 download_service,
                 installation_service.clone(),
+                platform_service,
             );
 
             let task_service = TaskService::new();

@@ -15,6 +15,7 @@ use crate::{
         services::{
             download::{DownloadProgress, DownloadService, DownloadStatus},
             installation::{Installation, InstallationService, InstallationTransaction},
+            platform::PlatformService,
             task::{TaskController, TaskError},
         },
         utils::{fs::DirectoryGuard, zip::ZipFile},
@@ -30,6 +31,7 @@ struct InstallerServiceInner {
     download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     download_service: DownloadService,
     installation_service: InstallationService,
+    platform_service: PlatformService,
 }
 
 impl InstallerService {
@@ -37,12 +39,14 @@ impl InstallerService {
         download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
         download_service: DownloadService,
         installation_service: InstallationService,
+        platform_service: PlatformService,
     ) -> Self {
         Self {
             inner: Arc::new(InstallerServiceInner {
                 download_configs_provider,
                 download_service,
                 installation_service,
+                platform_service,
             }),
         }
     }
@@ -54,6 +58,7 @@ impl InstallerService {
             download_configs_provider: self.inner.download_configs_provider.clone(),
             download_service: self.inner.download_service.clone(),
             installation_service: self.inner.installation_service.clone(),
+            platform_service: self.inner.platform_service.clone(),
             id,
             name,
             version: version.to_owned(),
@@ -66,6 +71,7 @@ pub struct Installer {
     download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     download_service: DownloadService,
     installation_service: InstallationService,
+    platform_service: PlatformService,
     id: String,
     name: String,
     version: String,
@@ -77,7 +83,7 @@ impl Installer {
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
     ) -> Result<Installation, TaskError> {
-        let platform = self.get_platform()?;
+        let platform = self.platform_service.get_platform()?;
         let slug = self.get_slug(&platform).await?;
 
         let transaction = self.installation_service.create(
@@ -163,21 +169,6 @@ impl Installer {
         Ok(installation)
     }
 
-    fn get_platform(&self) -> Result<String> {
-        let platform = match (std::env::consts::OS, std::env::consts::ARCH) {
-            ("linux", "x86_64") => "linux.64",
-            ("windows", "x86_64") => "windows.64",
-            (os, arch) => {
-                return Err(anyhow::anyhow!(InstallerError::PlatformNotSupported {
-                    arch: arch.to_owned(),
-                    os: os.to_owned(),
-                }))
-            }
-        };
-
-        Ok(platform.to_owned())
-    }
-
     async fn get_slug(&self, platform: &str) -> Result<String> {
         let download_configs = self
             .download_configs_provider
@@ -254,8 +245,6 @@ pub enum InstallerProgress {
 pub enum InstallerError {
     #[error("executable not found")]
     ExecutableNotFound,
-    #[error("platform '{os}-{arch}' is not supported")]
-    PlatformNotSupported { arch: String, os: String },
     #[error("version '{0}' is not available")]
     VersionNotAvailable(Version),
 }
