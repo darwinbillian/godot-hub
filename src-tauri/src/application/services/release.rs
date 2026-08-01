@@ -3,7 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 
 use crate::application::{
-    interfaces::{download_configs::DownloadConfigsProvider, release::ReleaseProvider},
+    interfaces::{
+        download_configs::{DownloadConfigsError, DownloadConfigsProvider},
+        release::ReleaseProvider,
+    },
     services::{
         install::{Install, InstallService},
         platform::PlatformService,
@@ -38,29 +41,56 @@ impl ReleaseService {
             .download_configs_provider
             .get_download_configs()
             .await?;
-        let releases = self.release_provider.list_releases().await?;
-        let installs = self.list_installs().await?;
-        Ok(releases
-            .into_iter()
-            .map(|release| {
-                let id = format!("{}-{}", release.version, release.flavor);
-                let name = format!("Godot {}", release.version);
-                let status =
-                    match download_configs.get_slug(&release.version, &release.flavor, &platform) {
-                        Ok(_) => ReleaseStatus::Available,
-                        Err(_) => ReleaseStatus::Unavailable,
-                    };
-                let install = installs.get(&id).cloned();
 
-                Release {
-                    id,
-                    name,
-                    version: release.version,
-                    flavor: release.flavor,
-                    release_notes: release.release_notes,
-                    status,
-                    install,
-                }
+        let installs = self.list_installs().await?;
+        let releases = self.release_provider.list_releases().await?;
+        Ok(releases
+            .iter()
+            .flat_map(|metadata| {
+                [false, true].into_iter().filter_map(|mono| {
+                    let id = format!(
+                        "{}-{}{}",
+                        metadata.version,
+                        metadata.flavor,
+                        if mono { "-mono" } else { "" }
+                    );
+
+                    let name = format!(
+                        "Godot {}{}",
+                        metadata.version,
+                        if mono { " Mono" } else { "" }
+                    );
+
+                    let status = match download_configs.get_slug(
+                        &metadata.version,
+                        &metadata.flavor,
+                        mono,
+                        &platform,
+                    ) {
+                        Ok(_) => ReleaseStatus::Available,
+                        Err(e) => match e {
+                            DownloadConfigsError::ReleaseNotAvailableForPlatform(_, _) => {
+                                ReleaseStatus::Unavailable
+                            }
+                            _ => return None,
+                        },
+                    };
+
+                    let install = installs.get(&id).cloned();
+
+                    let release = Release {
+                        id,
+                        name,
+                        version: metadata.version.clone(),
+                        flavor: metadata.flavor.clone(),
+                        mono,
+                        release_notes: metadata.release_notes.clone(),
+                        status,
+                        install,
+                    };
+
+                    Some(release)
+                })
             })
             .collect())
     }
@@ -70,7 +100,12 @@ impl ReleaseService {
         Ok(installs
             .into_iter()
             .map(|install| {
-                let id = format!("{}-{}", install.version, install.flavor);
+                let id = format!(
+                    "{}-{}{}",
+                    install.version,
+                    install.flavor,
+                    if install.mono { "-mono" } else { "" }
+                );
                 (id, install)
             })
             .collect())
@@ -82,6 +117,7 @@ pub struct Release {
     pub name: String,
     pub version: String,
     pub flavor: String,
+    pub mono: bool,
     pub release_notes: String,
     pub status: ReleaseStatus,
     pub install: Option<Install>,

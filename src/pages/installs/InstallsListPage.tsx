@@ -420,7 +420,9 @@ function RetryButton({ install: item }: { install: Install }) {
       className="btn btn-ghost p-1"
       title="Retry"
       onClick={() => {
-        install(item.version, item.flavor).catch((e) => console.error(e));
+        install(item.version, item.flavor, item.mono).catch((e) =>
+          console.error(e),
+        );
       }}
     >
       <RotateCcwIcon size={16} />

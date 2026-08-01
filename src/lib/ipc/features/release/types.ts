@@ -5,6 +5,7 @@ export interface Release {
   name: string;
   version: string;
   flavor: string;
+  mono: boolean;
   release_notes: string;
   status: ReleaseStatus;
   install?: Install;

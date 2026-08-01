@@ -1,10 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Install } from "./types";
 
-export function install(version: string, flavor: string): Promise<void> {
+export function install(
+  version: string,
+  flavor: string,
+  mono: boolean,
+): Promise<void> {
   return invoke<void>("installs::install", {
     version,
     flavor,
+    mono,
   });
 }
 

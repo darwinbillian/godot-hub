@@ -48,9 +48,9 @@ impl InstallerService {
         }
     }
 
-    pub fn create(&self, version: &str, flavor: &str) -> Installer {
-        let id = format!("{}-{}", version, flavor);
-        let name = format!("Godot {}", version);
+    pub fn create(&self, version: &str, flavor: &str, mono: bool) -> Installer {
+        let id = format!("{}-{}{}", version, flavor, if mono { "-mono" } else { "" });
+        let name = format!("Godot {}{}", version, if mono { " Mono" } else { "" });
         Installer {
             download_configs_provider: self.inner.download_configs_provider.clone(),
             download_service: self.inner.download_service.clone(),
@@ -60,6 +60,7 @@ impl InstallerService {
             name,
             version: version.to_owned(),
             flavor: flavor.to_owned(),
+            mono,
         }
     }
 }
@@ -73,6 +74,7 @@ pub struct Installer {
     name: String,
     version: String,
     flavor: String,
+    mono: bool,
 }
 
 impl Installer {
@@ -88,6 +90,7 @@ impl Installer {
             &self.name,
             &self.version,
             &self.flavor,
+            self.mono,
             &platform,
         );
 
@@ -173,7 +176,7 @@ impl Installer {
             .download_configs_provider
             .get_download_configs()
             .await?;
-        let slug = download_configs.get_slug(&self.version, &self.flavor, platform)?;
+        let slug = download_configs.get_slug(&self.version, &self.flavor, self.mono, platform)?;
         Ok(slug)
     }
 
@@ -214,6 +217,7 @@ pub struct InstallerState {
     pub name: String,
     pub version: String,
     pub flavor: String,
+    pub mono: bool,
 }
 
 impl<I> From<I> for InstallerState
@@ -227,6 +231,7 @@ where
             name: value.name.clone(),
             version: value.version.clone(),
             flavor: value.flavor.clone(),
+            mono: value.mono,
         }
     }
 }

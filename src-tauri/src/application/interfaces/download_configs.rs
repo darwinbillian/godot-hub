@@ -15,6 +15,7 @@ pub trait DownloadConfigs {
         &self,
         version: &str,
         flavor: &str,
+        mono: bool,
         platform: &str,
     ) -> Result<String, DownloadConfigsError>;
 }

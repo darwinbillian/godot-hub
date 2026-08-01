@@ -76,6 +76,7 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
         &self,
         version: &str,
         _flavor: &str,
+        mono: bool,
         platform: &str,
     ) -> Result<String, DownloadConfigsError> {
         let version = Version::from_str(version)
@@ -85,7 +86,16 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
             .download_configs
             .defaults
             .get(&version.major.to_string())
-            .and_then(|config| config.editor.as_ref())
+            .and_then(|config| {
+                if mono {
+                    config
+                        .mono
+                        .as_ref()
+                        .and_then(|config| config.editor.as_ref())
+                } else {
+                    config.editor.as_ref()
+                }
+            })
             .ok_or_else(|| DownloadConfigsError::ReleaseNotAvailable(version.clone()))?;
 
         let slug = editor.get(platform).ok_or_else(|| {

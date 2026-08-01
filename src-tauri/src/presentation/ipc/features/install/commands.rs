@@ -8,8 +8,12 @@ pub async fn installs_install(
     state: State<'_, AppState>,
     version: String,
     flavor: String,
+    mono: bool,
 ) -> Result<(), ErrorDto> {
-    state.install_service.install(&version, &flavor).await?;
+    state
+        .install_service
+        .install(&version, &flavor, mono)
+        .await?;
     Ok(())
 }
 

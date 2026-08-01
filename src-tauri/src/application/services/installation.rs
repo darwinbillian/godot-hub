@@ -39,6 +39,7 @@ impl InstallationService {
         name: &str,
         version: &str,
         flavor: &str,
+        mono: bool,
         platform: &str,
     ) -> InstallationTransaction {
         InstallationTransaction {
@@ -47,6 +48,7 @@ impl InstallationService {
             name: name.to_owned(),
             version: version.to_owned(),
             flavor: flavor.to_owned(),
+            mono,
             platform: platform.to_owned(),
         }
     }
@@ -82,6 +84,7 @@ impl InstallationService {
                 name: metadata.name,
                 version: metadata.version,
                 flavor: metadata.flavor,
+                mono: metadata.mono,
                 platform: metadata.platform,
                 executable: PathBuf::from(metadata.executable),
             };
@@ -111,6 +114,7 @@ pub struct Installation {
     pub name: String,
     pub version: String,
     pub flavor: String,
+    pub mono: bool,
     pub platform: String,
     pub executable: PathBuf,
 }
@@ -163,8 +167,9 @@ pub struct InstallationTransaction {
     id: String,
     name: String,
     version: String,
-    platform: String,
     flavor: String,
+    mono: bool,
+    platform: String,
 }
 
 impl InstallationTransaction {
@@ -179,6 +184,7 @@ impl InstallationTransaction {
             name: self.name,
             version: self.version,
             flavor: self.flavor,
+            mono: self.mono,
             platform: self.platform,
             executable: executable.to_owned(),
         };
@@ -208,6 +214,8 @@ pub struct InstallationMetadata {
     pub name: String,
     pub version: String,
     pub flavor: String,
+    #[serde(default)]
+    pub mono: bool,
     pub platform: String,
     pub executable: String,
 }

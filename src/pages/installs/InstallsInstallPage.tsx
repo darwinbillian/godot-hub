@@ -208,7 +208,7 @@ function ReleaseCardActions({ release }: { release: Release }) {
             <button
               className="btn btn-primary"
               onClick={() => {
-                install(release.version, release.flavor)
+                install(release.version, release.flavor, release.mono)
                   .then(() => navigate("/installs"))
                   .catch((e) => console.error(e));
               }}

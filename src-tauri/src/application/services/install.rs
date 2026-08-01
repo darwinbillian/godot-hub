@@ -103,8 +103,8 @@ impl InstallService {
         &self.inner.remove_event
     }
 
-    pub async fn install(&self, version: &str, flavor: &str) -> Result<()> {
-        let installer = self.inner.installer_service.create(version, flavor);
+    pub async fn install(&self, version: &str, flavor: &str, mono: bool) -> Result<()> {
+        let installer = self.inner.installer_service.create(version, flavor, mono);
         let state = InstallerState::from(&installer);
         let task = Task::new(&state.id.clone(), state);
 
@@ -135,6 +135,7 @@ impl InstallService {
                 name: task.state.name.clone(),
                 version: task.state.version.clone(),
                 flavor: task.state.flavor.clone(),
+                mono: task.state.mono,
                 status,
             };
 
@@ -145,8 +146,9 @@ impl InstallService {
             let install = Install {
                 id: installation.id.clone(),
                 name: installation.name.clone(),
-                flavor: installation.flavor.clone(),
                 version: installation.version.clone(),
+                flavor: installation.flavor.clone(),
+                mono: installation.mono,
                 status: InstallStatus::Installed(Arc::new(installation)),
             };
 
@@ -165,6 +167,7 @@ pub struct Install {
     pub name: String,
     pub version: String,
     pub flavor: String,
+    pub mono: bool,
     pub status: InstallStatus,
 }
 
