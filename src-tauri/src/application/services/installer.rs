@@ -9,18 +9,15 @@ use anyhow::Result;
 use thiserror::Error;
 use tokio_stream::StreamExt;
 
-use crate::{
-    application::{
-        interfaces::{download::DownloadRequest, download_configs::DownloadConfigsProvider},
-        services::{
-            download::{DownloadProgress, DownloadService, DownloadStatus},
-            installation::{Installation, InstallationService, InstallationTransaction},
-            platform::PlatformService,
-            task::{TaskController, TaskError},
-        },
-        utils::{fs::DirectoryGuard, zip::ZipFile},
+use crate::application::{
+    interfaces::{download::DownloadRequest, download_configs::DownloadConfigsProvider},
+    services::{
+        download::{DownloadProgress, DownloadService, DownloadStatus},
+        installation::{Installation, InstallationService, InstallationTransaction},
+        platform::PlatformService,
+        task::{TaskController, TaskError},
     },
-    domain::models::version::Version,
+    utils::{fs::DirectoryGuard, zip::ZipFile},
 };
 
 pub struct InstallerService {
@@ -245,6 +242,4 @@ pub enum InstallerProgress {
 pub enum InstallerError {
     #[error("executable not found")]
     ExecutableNotFound,
-    #[error("version '{0}' is not available")]
-    VersionNotAvailable(Version),
 }

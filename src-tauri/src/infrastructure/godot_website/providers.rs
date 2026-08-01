@@ -5,13 +5,10 @@ use tokio_stream::StreamExt;
 
 use super::client::GodotWebsiteClient;
 use crate::{
-    application::{
-        interfaces::{
-            download::{DownloadProvider, DownloadRequest, DownloadResponse},
-            download_configs::{DownloadConfigs, DownloadConfigsProvider},
-            release::{ReleaseMetadata, ReleaseProvider},
-        },
-        services::installer::InstallerError,
+    application::interfaces::{
+        download::{DownloadProvider, DownloadRequest, DownloadResponse},
+        download_configs::{DownloadConfigs, DownloadConfigsError, DownloadConfigsProvider},
+        release::{ReleaseMetadata, ReleaseProvider},
     },
     domain::models::version::Version,
     infrastructure::godot_website::dtos::DownloadConfigsDto,
@@ -75,20 +72,29 @@ impl GodotWebsiteDownloadConfigs {
 }
 
 impl DownloadConfigs for GodotWebsiteDownloadConfigs {
-    fn get_slug(&self, version: &str, _flavor: &str, platform: &str) -> Result<String> {
-        let version = Version::from_str(version)?;
-        let config = self
+    fn get_slug(
+        &self,
+        version: &str,
+        _flavor: &str,
+        platform: &str,
+    ) -> Result<String, DownloadConfigsError> {
+        let version = Version::from_str(version)
+            .map_err(|_| DownloadConfigsError::VersionNotValid(version.to_owned()))?;
+
+        let editor = self
             .download_configs
             .defaults
             .get(&version.major.to_string())
-            .ok_or_else(|| InstallerError::VersionNotAvailable(version.clone()))?;
-        let editor = config
-            .editor
-            .as_ref()
-            .ok_or_else(|| InstallerError::VersionNotAvailable(version.clone()))?;
-        let slug = editor
-            .get(platform)
-            .ok_or_else(|| InstallerError::VersionNotAvailable(version.clone()))?;
+            .and_then(|config| config.editor.as_ref())
+            .ok_or_else(|| DownloadConfigsError::ReleaseNotAvailable(version.clone()))?;
+
+        let slug = editor.get(platform).ok_or_else(|| {
+            DownloadConfigsError::ReleaseNotAvailableForPlatform(
+                version.clone(),
+                platform.to_owned(),
+            )
+        })?;
+
         Ok(slug.to_owned())
     }
 }
