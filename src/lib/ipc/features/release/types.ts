@@ -1,6 +1,7 @@
 import { Install } from "@/lib/ipc/features/install/types";
 
 export interface Release {
+  id: string;
   name: string;
   version: string;
   flavor: string;

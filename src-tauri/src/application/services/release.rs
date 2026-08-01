@@ -43,36 +43,42 @@ impl ReleaseService {
         Ok(releases
             .into_iter()
             .map(|release| {
-                let key = (release.version.clone(), release.flavor.clone());
+                let id = format!("{}-{}", release.version, release.flavor);
                 let name = format!("Godot {}", release.version);
                 let status =
                     match download_configs.get_slug(&release.version, &release.flavor, &platform) {
                         Ok(_) => ReleaseStatus::Available,
                         Err(_) => ReleaseStatus::Unavailable,
                     };
+                let install = installs.get(&id).cloned();
 
                 Release {
+                    id,
                     name,
                     version: release.version,
                     flavor: release.flavor,
                     release_notes: release.release_notes,
                     status,
-                    install: installs.get(&key).cloned(),
+                    install,
                 }
             })
             .collect())
     }
 
-    async fn list_installs(&self) -> Result<HashMap<(String, String), Install>> {
+    async fn list_installs(&self) -> Result<HashMap<String, Install>> {
         let installs = self.install_service.list().await?;
         Ok(installs
             .into_iter()
-            .map(|install| ((install.version.clone(), install.flavor.clone()), install))
+            .map(|install| {
+                let id = format!("{}-{}", install.version, install.flavor);
+                (id, install)
+            })
             .collect())
     }
 }
 
 pub struct Release {
+    pub id: String,
     pub name: String,
     pub version: String,
     pub flavor: String,

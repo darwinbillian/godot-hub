@@ -102,7 +102,7 @@ export default function InstallsInstallPage() {
     return (
       <ul className="flex flex-col gap-4">
         {filteredReleases.map((release) => (
-          <li key={release.version}>
+          <li key={release.id}>
             <ReleaseCard release={release} />
           </li>
         ))}

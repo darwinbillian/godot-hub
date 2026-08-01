@@ -9,6 +9,7 @@ use crate::{
 
 #[derive(Serialize, Debug)]
 pub struct ReleaseDto {
+    id: String,
     name: String,
     version: String,
     flavor: String,
@@ -20,6 +21,7 @@ pub struct ReleaseDto {
 impl From<Release> for ReleaseDto {
     fn from(value: Release) -> Self {
         Self {
+            id: value.id,
             name: value.name,
             version: value.version,
             flavor: value.flavor,
