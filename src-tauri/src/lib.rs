@@ -75,10 +75,10 @@ pub fn run() {
             let installation_service = InstallationService::new(&local_data_dir.join("installs"));
 
             let installer_service = InstallerService::new(
-                download_configs_provider,
+                download_configs_provider.clone(),
                 download_service,
                 installation_service.clone(),
-                platform_service,
+                platform_service.clone(),
             );
 
             let task_service = TaskService::new();
@@ -89,7 +89,12 @@ pub fn run() {
                 task_service,
             );
 
-            let release_service = ReleaseService::new(release_provider, install_service.clone());
+            let release_service = ReleaseService::new(
+                download_configs_provider.clone(),
+                release_provider,
+                install_service.clone(),
+                platform_service.clone(),
+            );
 
             install_service
                 .add_event()

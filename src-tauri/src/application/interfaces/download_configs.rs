@@ -4,7 +4,7 @@ use anyhow::Result;
 
 #[async_trait::async_trait]
 pub trait DownloadConfigsProvider {
-    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs>>;
+    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs + Send + Sync>>;
 }
 
 pub trait DownloadConfigs {

@@ -179,6 +179,12 @@ function ReleaseCardActions({ release }: { release: Release }) {
               Install
             </button>
           );
+        case "unavailable":
+          return (
+            <button className="btn btn-disabled" disabled>
+              Unavailable
+            </button>
+          );
         default:
           return null;
       }

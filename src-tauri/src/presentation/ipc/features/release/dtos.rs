@@ -32,6 +32,7 @@ impl From<Release> for ReleaseDto {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ReleaseStatusDto {
     Available,
+    Unavailable,
 }
 
 impl<R> From<R> for ReleaseStatusDto
@@ -42,6 +43,7 @@ where
         let value = value.borrow();
         match value {
             ReleaseStatus::Available => Self::Available,
+            ReleaseStatus::Unavailable => Self::Unavailable,
         }
     }
 }

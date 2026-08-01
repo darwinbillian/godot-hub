@@ -8,4 +8,4 @@ export interface Release {
   install?: Install;
 }
 
-export type ReleaseStatus = { type: "available" };
+export type ReleaseStatus = { type: "available" } | { type: "unavailable" };

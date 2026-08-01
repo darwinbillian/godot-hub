@@ -3,38 +3,58 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 
 use crate::application::{
-    interfaces::release::ReleaseProvider,
-    services::install::{Install, InstallService},
+    interfaces::{download_configs::DownloadConfigsProvider, release::ReleaseProvider},
+    services::{
+        install::{Install, InstallService},
+        platform::PlatformService,
+    },
 };
 
 pub struct ReleaseService {
+    download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     release_provider: Arc<dyn ReleaseProvider + Send + Sync>,
     install_service: InstallService,
+    platform_service: PlatformService,
 }
 
 impl ReleaseService {
     pub fn new(
+        download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
         release_provider: Arc<dyn ReleaseProvider + Send + Sync>,
         install_service: InstallService,
+        platform_service: PlatformService,
     ) -> Self {
         Self {
+            download_configs_provider,
             release_provider,
             install_service,
+            platform_service,
         }
     }
 
     pub async fn list(&self) -> Result<Vec<Release>> {
+        let platform = self.platform_service.get_platform()?;
+        let download_configs = self
+            .download_configs_provider
+            .get_download_configs()
+            .await?;
         let releases = self.release_provider.list_releases().await?;
         let installs = self.list_installs().await?;
         Ok(releases
             .into_iter()
             .map(|release| {
                 let key = (release.name.clone(), release.flavor.clone());
+                let status =
+                    match download_configs.get_slug(&release.name, &release.flavor, &platform) {
+                        Ok(_) => ReleaseStatus::Available,
+                        Err(_) => ReleaseStatus::Unavailable,
+                    };
+
                 Release {
                     name: release.name,
                     flavor: release.flavor,
                     release_notes: release.release_notes,
-                    status: ReleaseStatus::Available,
+                    status,
                     install: installs.get(&key).cloned(),
                 }
             })
@@ -60,4 +80,5 @@ pub struct Release {
 
 pub enum ReleaseStatus {
     Available,
+    Unavailable,
 }

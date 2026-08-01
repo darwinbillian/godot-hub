@@ -58,7 +58,7 @@ impl GodotWebsiteDownloadConfigsProvider {
 
 #[async_trait::async_trait]
 impl DownloadConfigsProvider for GodotWebsiteDownloadConfigsProvider {
-    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs>> {
+    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs + Send + Sync>> {
         let download_configs = self.client.get_download_configs().await?;
         Ok(Arc::new(GodotWebsiteDownloadConfigs::new(download_configs)))
     }
