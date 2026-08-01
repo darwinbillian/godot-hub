@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use anyhow::{Error, Result};
 use tokio_stream::StreamExt;
@@ -7,10 +7,11 @@ use super::client::GodotWebsiteClient;
 use crate::{
     application::services::{
         download::{DownloadProvider, DownloadRequest, DownloadResponse},
-        installer::{DownloadConfigsProvider, InstallerError},
+        installer::{DownloadConfigs, DownloadConfigsProvider, InstallerError},
         release::{ReleaseMetadata, ReleaseProvider},
     },
     domain::models::version::Version,
+    infrastructure::godot_website::dtos::DownloadConfigsDto,
 };
 
 pub struct GodotWebsiteReleaseProvider {
@@ -54,10 +55,27 @@ impl GodotWebsiteDownloadConfigsProvider {
 
 #[async_trait::async_trait]
 impl DownloadConfigsProvider for GodotWebsiteDownloadConfigsProvider {
-    async fn get_slug(&self, version: &str, _flavor: &str, platform: &str) -> Result<String> {
+    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs>> {
+        let download_configs = self.client.get_download_configs().await?;
+        Ok(Arc::new(GodotWebsiteDownloadConfigs::new(download_configs)))
+    }
+}
+
+pub struct GodotWebsiteDownloadConfigs {
+    download_configs: DownloadConfigsDto,
+}
+
+impl GodotWebsiteDownloadConfigs {
+    pub fn new(download_configs: DownloadConfigsDto) -> Self {
+        Self { download_configs }
+    }
+}
+
+impl DownloadConfigs for GodotWebsiteDownloadConfigs {
+    fn get_slug(&self, version: &str, _flavor: &str, platform: &str) -> Result<String> {
         let version = Version::from_str(version)?;
-        let download_configs = self.client.list_download_configs().await?;
-        let config = download_configs
+        let config = self
+            .download_configs
             .defaults
             .get(&version.major.to_string())
             .ok_or_else(|| InstallerError::VersionNotAvailable(version.clone()))?;

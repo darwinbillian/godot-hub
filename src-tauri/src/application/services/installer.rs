@@ -23,7 +23,11 @@ use crate::{
 
 #[async_trait::async_trait]
 pub trait DownloadConfigsProvider {
-    async fn get_slug(&self, version: &str, flavor: &str, platform: &str) -> Result<String>;
+    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs>>;
+}
+
+pub trait DownloadConfigs {
+    fn get_slug(&self, version: &str, flavor: &str, platform: &str) -> Result<String>;
 }
 
 pub struct InstallerService {
@@ -31,22 +35,22 @@ pub struct InstallerService {
 }
 
 struct InstallerServiceInner {
+    download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     download_service: DownloadService,
     installation_service: InstallationService,
-    download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
 }
 
 impl InstallerService {
     pub fn new(
+        download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
         download_service: DownloadService,
         installation_service: InstallationService,
-        download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     ) -> Self {
         Self {
             inner: Arc::new(InstallerServiceInner {
+                download_configs_provider,
                 download_service,
                 installation_service,
-                download_configs_provider,
             }),
         }
     }
@@ -55,9 +59,9 @@ impl InstallerService {
         let id = format!("{}-{}", version, flavor);
         let name = format!("Godot {}", version);
         Installer {
+            download_configs_provider: self.inner.download_configs_provider.clone(),
             download_service: self.inner.download_service.clone(),
             installation_service: self.inner.installation_service.clone(),
-            download_configs_provider: self.inner.download_configs_provider.clone(),
             id,
             name,
             version: version.to_owned(),
@@ -67,9 +71,9 @@ impl InstallerService {
 }
 
 pub struct Installer {
+    download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     download_service: DownloadService,
     installation_service: InstallationService,
-    download_configs_provider: Arc<dyn DownloadConfigsProvider + Send + Sync>,
     id: String,
     name: String,
     version: String,
@@ -82,10 +86,7 @@ impl Installer {
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
     ) -> Result<Installation, TaskError> {
         let platform = self.get_platform()?;
-        let slug = self
-            .download_configs_provider
-            .get_slug(&self.version, &self.flavor, &platform)
-            .await?;
+        let slug = self.get_slug(&platform).await?;
 
         let transaction = self.installation_service.create(
             &self.id,
@@ -183,6 +184,15 @@ impl Installer {
         };
 
         Ok(platform.to_owned())
+    }
+
+    async fn get_slug(&self, platform: &str) -> Result<String> {
+        let download_configs = self
+            .download_configs_provider
+            .get_download_configs()
+            .await?;
+        let slug = download_configs.get_slug(&self.version, &self.flavor, platform)?;
+        Ok(slug)
     }
 
     async fn find_executable(&self, slug: &str, download_path: &Path) -> Result<String> {

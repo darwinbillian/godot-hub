@@ -17,7 +17,7 @@ impl GodotWebsiteClient {
         Self { client }
     }
 
-    pub async fn list_download_configs(&self) -> Result<DownloadConfigsDto> {
+    pub async fn get_download_configs(&self) -> Result<DownloadConfigsDto> {
         let request = self.client.get(
             "https://raw.githubusercontent.com/godotengine/godot-website/master/_data/download_configs.yml",
         );
