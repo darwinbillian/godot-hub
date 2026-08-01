@@ -137,7 +137,7 @@ impl Installer {
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
         slug: &str,
         download_path: &Path,
-    ) -> Result<String> {
+    ) -> Result<PathBuf> {
         controller.report(InstallerProgress::Verifying);
         let executable = self.find_executable(slug, download_path).await?;
         Ok(executable)
@@ -151,7 +151,9 @@ impl Installer {
     ) -> Result<()> {
         controller.report(InstallerProgress::Extracting);
         let archive = ZipFile::open(download_path).await?;
-        archive.extract(transaction.dir()).await?;
+        archive
+            .extract_unwrapped_root_dir(transaction.dir())
+            .await?;
         Ok(())
     }
 
@@ -159,7 +161,7 @@ impl Installer {
         &self,
         controller: &TaskController<InstallerState, InstallerProgress, Installation>,
         transaction: InstallationTransaction,
-        executable: &str,
+        executable: &Path,
     ) -> Result<Installation> {
         controller.report(InstallerProgress::Finalizing);
         let installation = transaction.commit(executable).await?;
@@ -175,9 +177,9 @@ impl Installer {
         Ok(slug)
     }
 
-    async fn find_executable(&self, slug: &str, download_path: &Path) -> Result<String> {
+    async fn find_executable(&self, slug: &str, download_path: &Path) -> Result<PathBuf> {
         let archive = ZipFile::open(download_path).await?;
-
+        let root_dir = archive.root_dir()?;
         let executable = archive
             .file_names()
             .into_iter()
@@ -191,6 +193,15 @@ impl Installer {
                 score += file_name.contains(slug.strip_suffix(".zip").unwrap_or(slug)) as i32 * 5;
                 score -= file_name.contains("console") as i32;
                 score
+            })
+            .map(|executable| {
+                let executable = PathBuf::from(executable);
+
+                if let Some(root_dir) = &root_dir {
+                    executable.strip_prefix(root_dir).unwrap().to_owned()
+                } else {
+                    executable
+                }
             })
             .ok_or(InstallerError::ExecutableNotFound)?;
 

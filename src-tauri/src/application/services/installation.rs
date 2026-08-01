@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -84,7 +83,7 @@ impl InstallationService {
                 version: metadata.version,
                 flavor: metadata.flavor,
                 platform: metadata.platform,
-                executable: metadata.executable,
+                executable: PathBuf::from(metadata.executable),
             };
 
             installations.push(installation);
@@ -113,7 +112,7 @@ pub struct Installation {
     pub version: String,
     pub flavor: String,
     pub platform: String,
-    pub executable: String,
+    pub executable: PathBuf,
 }
 
 pub struct InstallationHandle {
@@ -173,7 +172,7 @@ impl InstallationTransaction {
         &self.dir
     }
 
-    pub async fn commit(self, executable: &str) -> Result<Installation> {
+    pub async fn commit(self, executable: &Path) -> Result<Installation> {
         let installation = Installation {
             dir: self.dir,
             id: self.id,
@@ -184,7 +183,20 @@ impl InstallationTransaction {
             executable: executable.to_owned(),
         };
 
-        let metadata = InstallationMetadata::from(&installation);
+        let metadata = InstallationMetadata {
+            name: installation.name.clone(),
+            version: installation.version.clone(),
+            flavor: installation.flavor.clone(),
+            mono: installation.mono,
+            platform: installation.platform.clone(),
+            executable: installation
+                .executable
+                .clone()
+                .into_os_string()
+                .into_string()
+                .unwrap(),
+        };
+
         metadata.save(&installation.dir).await?;
 
         Ok(installation)
@@ -213,22 +225,6 @@ impl InstallationMetadata {
         let bytes = tokio::fs::read(path).await?;
         let metadata = serde_json::from_slice::<InstallationMetadata>(&bytes)?;
         Ok(metadata)
-    }
-}
-
-impl<I> From<I> for InstallationMetadata
-where
-    I: Borrow<Installation>,
-{
-    fn from(value: I) -> Self {
-        let value = value.borrow();
-        Self {
-            name: value.name.clone(),
-            version: value.version.clone(),
-            flavor: value.flavor.clone(),
-            platform: value.platform.clone(),
-            executable: value.executable.clone(),
-        }
     }
 }
 

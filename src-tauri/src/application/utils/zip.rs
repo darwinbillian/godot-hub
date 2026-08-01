@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
 
@@ -30,7 +30,7 @@ impl ZipFile {
         })
     }
 
-    pub async fn extract<D>(&self, directory: D) -> Result<()>
+    pub async fn extract_unwrapped_root_dir<D>(&self, directory: D) -> Result<()>
     where
         D: AsRef<Path>,
     {
@@ -39,7 +39,7 @@ impl ZipFile {
 
         tokio::task::spawn_blocking(move || -> Result<()> {
             let mut archive = archive.lock().unwrap();
-            archive.extract(directory)?;
+            archive.extract_unwrapped_root_dir(directory, zip::read::root_dir_common_filter)?;
             Ok(())
         })
         .await??;
@@ -53,5 +53,11 @@ impl ZipFile {
             .file_names()
             .map(|file_name| file_name.to_owned())
             .collect()
+    }
+
+    pub fn root_dir(&self) -> Result<Option<PathBuf>> {
+        let archive = self.archive.lock().unwrap();
+        let root_dir = archive.root_dir(zip::read::root_dir_common_filter)?;
+        Ok(root_dir)
     }
 }
