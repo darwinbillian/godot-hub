@@ -7,6 +7,7 @@ pub struct Version {
     pub major: u32,
     pub minor: u32,
     pub patch: Option<u32>,
+    pub build: Option<u32>,
 }
 
 impl FromStr for Version {
@@ -14,9 +15,10 @@ impl FromStr for Version {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts = s.split(".").collect::<Vec<&str>>();
-        let (major, minor, patch) = match parts.as_slice() {
-            [major, minor] => (major, minor, None),
-            [major, minor, patch] => (major, minor, Some(patch)),
+        let (major, minor, patch, build) = match parts.as_slice() {
+            [major, minor] => (major, minor, None, None),
+            [major, minor, patch] => (major, minor, Some(patch), None),
+            [major, minor, patch, build] => (major, minor, Some(patch), Some(build)),
             _ => return Err(anyhow::anyhow!(VersionError::ParseError(s.to_owned()))),
         };
 
@@ -24,6 +26,7 @@ impl FromStr for Version {
             major: major.parse()?,
             minor: minor.parse()?,
             patch: patch.map(|patch| patch.parse()).transpose()?,
+            build: build.map(|build| build.parse()).transpose()?,
         };
 
         Ok(version)
@@ -35,6 +38,9 @@ impl Display for Version {
         write!(f, "{}.{}", self.major, self.minor)?;
         if let Some(patch) = self.patch {
             write!(f, ".{}", patch)?;
+            if let Some(build) = self.build {
+                write!(f, ".{}", build)?;
+            }
         }
         Ok(())
     }
