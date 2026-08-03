@@ -13,7 +13,7 @@ use crate::{
             platform::PlatformService,
         },
     },
-    domain::models::version::{Flavor, Version},
+    domain::models::version::{Flavor, FlavorKind, Version},
 };
 
 pub struct ReleaseService {
@@ -59,8 +59,15 @@ impl ReleaseService {
                     );
 
                     let name = format!(
-                        "Godot {:.2}{}",
+                        "Godot {:.2}{}{}",
                         metadata.version,
+                        match metadata.flavor.kind {
+                            FlavorKind::Dev => " Dev",
+                            FlavorKind::Alpha => " Alpha",
+                            FlavorKind::Beta => " Beta",
+                            FlavorKind::Rc => " Rc",
+                            FlavorKind::Stable => "",
+                        },
                         if mono { " Mono" } else { "" }
                     );
 
