@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use tokio_stream::StreamExt;
@@ -10,7 +10,7 @@ use crate::{
         download_configs::{DownloadConfigs, DownloadConfigsError, DownloadConfigsProvider},
         release::{ReleaseMetadata, ReleaseProvider},
     },
-    domain::models::version::Version,
+    domain::models::version::{Flavor, FlavorKind, Version},
     infrastructure::godot_website::dtos::DownloadConfigsDto,
 };
 
@@ -27,17 +27,32 @@ impl GodotWebsiteReleaseProvider {
 #[async_trait::async_trait]
 impl ReleaseProvider for GodotWebsiteReleaseProvider {
     async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>> {
-        let versions = self.client.list_versions().await?;
-        Ok(versions
+        let releases = self.client.list_versions().await?;
+        Ok(releases
             .into_iter()
-            .filter(|version| version.flavor == "stable")
-            .map(|version| ReleaseMetadata {
-                version: version.name,
-                flavor: version.flavor,
-                release_notes: format!(
-                    "https://godotengine.org/{}",
-                    version.release_notes.trim_start_matches("/")
-                ),
+            .filter_map(|release| {
+                let (version, flavor) = match (
+                    release.name.parse::<Version>(),
+                    release.flavor.parse::<Flavor>(),
+                ) {
+                    (Ok(version), Ok(flavor)) => (version, flavor),
+                    _ => return None,
+                };
+
+                if flavor.kind != FlavorKind::Stable {
+                    return None;
+                }
+
+                let metadata = ReleaseMetadata {
+                    version,
+                    flavor,
+                    release_notes: format!(
+                        "https://godotengine.org/{}",
+                        release.release_notes.trim_start_matches("/")
+                    ),
+                };
+
+                Some(metadata)
             })
             .collect())
     }
@@ -74,14 +89,11 @@ impl GodotWebsiteDownloadConfigs {
 impl DownloadConfigs for GodotWebsiteDownloadConfigs {
     fn get_slug(
         &self,
-        version: &str,
-        _flavor: &str,
+        version: Version,
+        flavor: Flavor,
         mono: bool,
         platform: &str,
     ) -> Result<String, DownloadConfigsError> {
-        let version = Version::from_str(version)
-            .map_err(|_| DownloadConfigsError::VersionNotValid(version.to_owned()))?;
-
         let editor = self
             .download_configs
             .defaults
@@ -96,11 +108,12 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
                     config.editor.as_ref()
                 }
             })
-            .ok_or_else(|| DownloadConfigsError::ReleaseNotAvailable(version.clone()))?;
+            .ok_or(DownloadConfigsError::ReleaseNotAvailable(version, flavor))?;
 
         let slug = editor.get(platform).ok_or_else(|| {
             DownloadConfigsError::ReleaseNotAvailableForPlatform(
-                version.clone(),
+                version,
+                flavor,
                 platform.to_owned(),
             )
         })?;
@@ -125,8 +138,8 @@ impl DownloadProvider for GodotWebsiteDownloadProvider {
         let response = self
             .client
             .download(
-                &request.version,
-                &request.flavor,
+                &request.version.to_string(),
+                &request.flavor.to_string(),
                 &request.slug,
                 &request.platform,
             )

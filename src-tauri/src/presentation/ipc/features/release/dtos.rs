@@ -24,8 +24,8 @@ impl From<Release> for ReleaseDto {
         Self {
             id: value.id,
             name: value.name,
-            version: value.version,
-            flavor: value.flavor,
+            version: value.version.to_string(),
+            flavor: value.flavor.to_string(),
             mono: value.mono,
             release_notes: value.release_notes,
             status: value.status.into(),

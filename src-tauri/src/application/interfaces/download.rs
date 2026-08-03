@@ -4,23 +4,25 @@ use anyhow::Result;
 use bytes::Bytes;
 use tokio_stream::Stream;
 
+use crate::domain::models::version::{Flavor, Version};
+
 #[async_trait::async_trait]
 pub trait DownloadProvider {
     async fn download(&self, download: DownloadRequest) -> Result<DownloadResponse>;
 }
 
 pub struct DownloadRequest {
-    pub version: String,
-    pub flavor: String,
+    pub version: Version,
+    pub flavor: Flavor,
     pub slug: String,
     pub platform: String,
 }
 
 impl DownloadRequest {
-    pub fn new(version: &str, flavor: &str, slug: &str, platform: &str) -> Self {
+    pub fn new(version: Version, flavor: Flavor, slug: &str, platform: &str) -> Self {
         Self {
-            version: version.to_owned(),
-            flavor: flavor.to_owned(),
+            version,
+            flavor,
             slug: slug.to_owned(),
             platform: platform.to_owned(),
         }

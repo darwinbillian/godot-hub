@@ -7,7 +7,10 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-use crate::application::utils::event::Event;
+use crate::{
+    application::utils::event::Event,
+    domain::models::version::{Flavor, Version},
+};
 
 #[derive(Clone)]
 pub struct InstallationService {
@@ -37,8 +40,8 @@ impl InstallationService {
         &self,
         id: &str,
         name: &str,
-        version: &str,
-        flavor: &str,
+        version: Version,
+        flavor: Flavor,
         mono: bool,
         platform: &str,
     ) -> InstallationTransaction {
@@ -46,8 +49,8 @@ impl InstallationService {
             dir: self.inner.dir.join(id),
             id: id.to_owned(),
             name: name.to_owned(),
-            version: version.to_owned(),
-            flavor: flavor.to_owned(),
+            version,
+            flavor,
             mono,
             platform: platform.to_owned(),
         }
@@ -82,8 +85,8 @@ impl InstallationService {
                 dir,
                 id,
                 name: metadata.name,
-                version: metadata.version,
-                flavor: metadata.flavor,
+                version: metadata.version.parse::<Version>()?,
+                flavor: metadata.flavor.parse::<Flavor>()?,
                 mono: metadata.mono,
                 platform: metadata.platform,
                 executable: PathBuf::from(metadata.executable),
@@ -112,8 +115,8 @@ pub struct Installation {
     pub dir: PathBuf,
     pub id: String,
     pub name: String,
-    pub version: String,
-    pub flavor: String,
+    pub version: Version,
+    pub flavor: Flavor,
     pub mono: bool,
     pub platform: String,
     pub executable: PathBuf,
@@ -166,8 +169,8 @@ pub struct InstallationTransaction {
     dir: PathBuf,
     id: String,
     name: String,
-    version: String,
-    flavor: String,
+    version: Version,
+    flavor: Flavor,
     mono: bool,
     platform: String,
 }
@@ -191,8 +194,8 @@ impl InstallationTransaction {
 
         let metadata = InstallationMetadata {
             name: installation.name.clone(),
-            version: installation.version.clone(),
-            flavor: installation.flavor.clone(),
+            version: installation.version.to_string(),
+            flavor: installation.flavor.to_string(),
             mono: installation.mono,
             platform: installation.platform.clone(),
             executable: installation

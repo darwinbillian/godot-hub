@@ -2,15 +2,18 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
 
-use crate::application::{
-    interfaces::{
-        download_configs::{DownloadConfigsError, DownloadConfigsProvider},
-        release::ReleaseProvider,
+use crate::{
+    application::{
+        interfaces::{
+            download_configs::{DownloadConfigsError, DownloadConfigsProvider},
+            release::ReleaseProvider,
+        },
+        services::{
+            install::{Install, InstallService},
+            platform::PlatformService,
+        },
     },
-    services::{
-        install::{Install, InstallService},
-        platform::PlatformService,
-    },
+    domain::models::version::{Flavor, Version},
 };
 
 pub struct ReleaseService {
@@ -62,14 +65,14 @@ impl ReleaseService {
                     );
 
                     let status = match download_configs.get_slug(
-                        &metadata.version,
-                        &metadata.flavor,
+                        metadata.version,
+                        metadata.flavor,
                         mono,
                         &platform,
                     ) {
                         Ok(_) => ReleaseStatus::Available,
                         Err(e) => match e {
-                            DownloadConfigsError::ReleaseNotAvailableForPlatform(_, _) => {
+                            DownloadConfigsError::ReleaseNotAvailableForPlatform(_, _, _) => {
                                 ReleaseStatus::Unavailable
                             }
                             _ => return None,
@@ -81,8 +84,8 @@ impl ReleaseService {
                     let release = Release {
                         id,
                         name,
-                        version: metadata.version.clone(),
-                        flavor: metadata.flavor.clone(),
+                        version: metadata.version,
+                        flavor: metadata.flavor,
                         mono,
                         release_notes: metadata.release_notes.clone(),
                         status,
@@ -115,8 +118,8 @@ impl ReleaseService {
 pub struct Release {
     pub id: String,
     pub name: String,
-    pub version: String,
-    pub flavor: String,
+    pub version: Version,
+    pub flavor: Flavor,
     pub mono: bool,
     pub release_notes: String,
     pub status: ReleaseStatus,

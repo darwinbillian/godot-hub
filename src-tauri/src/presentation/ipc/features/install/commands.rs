@@ -1,7 +1,11 @@
 use tauri::State;
 
 use super::dtos::InstallDto;
-use crate::{presentation::ipc::dtos::ErrorDto, state::AppState};
+use crate::{
+    domain::models::version::{Flavor, Version},
+    presentation::ipc::dtos::ErrorDto,
+    state::AppState,
+};
 
 #[tauri::command(rename = "installs::install")]
 pub async fn installs_install(
@@ -10,10 +14,9 @@ pub async fn installs_install(
     flavor: String,
     mono: bool,
 ) -> Result<(), ErrorDto> {
-    state
-        .install_service
-        .install(&version, &flavor, mono)
-        .await?;
+    let version = version.parse::<Version>()?;
+    let flavor = flavor.parse::<Flavor>()?;
+    state.install_service.install(version, flavor, mono).await?;
     Ok(())
 }
 

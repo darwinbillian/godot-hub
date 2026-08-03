@@ -2,13 +2,16 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{Error, Result};
 
-use crate::application::{
-    services::{
-        installation::{Installation, InstallationService},
-        installer::{InstallerProgress, InstallerService, InstallerState},
-        task::{Task, TaskService, TaskStatus},
+use crate::{
+    application::{
+        services::{
+            installation::{Installation, InstallationService},
+            installer::{InstallerProgress, InstallerService, InstallerState},
+            task::{Task, TaskService, TaskStatus},
+        },
+        utils::event::Event,
     },
-    utils::event::Event,
+    domain::models::version::{Flavor, Version},
 };
 
 #[derive(Clone)]
@@ -103,7 +106,7 @@ impl InstallService {
         &self.inner.remove_event
     }
 
-    pub async fn install(&self, version: &str, flavor: &str, mono: bool) -> Result<()> {
+    pub async fn install(&self, version: Version, flavor: Flavor, mono: bool) -> Result<()> {
         let installer = self.inner.installer_service.create(version, flavor, mono);
         let state = InstallerState::from(&installer);
         let task = Task::new(&state.id.clone(), state);
@@ -133,8 +136,8 @@ impl InstallService {
             let install = Install {
                 id: task.state.id.clone(),
                 name: task.state.name.clone(),
-                version: task.state.version.clone(),
-                flavor: task.state.flavor.clone(),
+                version: task.state.version,
+                flavor: task.state.flavor,
                 mono: task.state.mono,
                 status,
             };
@@ -146,8 +149,8 @@ impl InstallService {
             let install = Install {
                 id: installation.id.clone(),
                 name: installation.name.clone(),
-                version: installation.version.clone(),
-                flavor: installation.flavor.clone(),
+                version: installation.version,
+                flavor: installation.flavor,
                 mono: installation.mono,
                 status: InstallStatus::Installed(Arc::new(installation)),
             };
@@ -165,8 +168,8 @@ impl InstallService {
 pub struct Install {
     pub id: String,
     pub name: String,
-    pub version: String,
-    pub flavor: String,
+    pub version: Version,
+    pub flavor: Flavor,
     pub mono: bool,
     pub status: InstallStatus,
 }

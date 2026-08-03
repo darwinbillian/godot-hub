@@ -9,15 +9,18 @@ use anyhow::Result;
 use thiserror::Error;
 use tokio_stream::StreamExt;
 
-use crate::application::{
-    interfaces::{download::DownloadRequest, download_configs::DownloadConfigsProvider},
-    services::{
-        download::{DownloadProgress, DownloadService, DownloadStatus},
-        installation::{Installation, InstallationService, InstallationTransaction},
-        platform::PlatformService,
-        task::{TaskController, TaskError},
+use crate::{
+    application::{
+        interfaces::{download::DownloadRequest, download_configs::DownloadConfigsProvider},
+        services::{
+            download::{DownloadProgress, DownloadService, DownloadStatus},
+            installation::{Installation, InstallationService, InstallationTransaction},
+            platform::PlatformService,
+            task::{TaskController, TaskError},
+        },
+        utils::{fs::DirectoryGuard, zip::ZipFile},
     },
-    utils::{fs::DirectoryGuard, zip::ZipFile},
+    domain::models::version::{Flavor, Version},
 };
 
 pub struct InstallerService {
@@ -48,7 +51,7 @@ impl InstallerService {
         }
     }
 
-    pub fn create(&self, version: &str, flavor: &str, mono: bool) -> Installer {
+    pub fn create(&self, version: Version, flavor: Flavor, mono: bool) -> Installer {
         let id = format!("{}-{}{}", version, flavor, if mono { "-mono" } else { "" });
         let name = format!("Godot {}{}", version, if mono { " Mono" } else { "" });
         Installer {
@@ -58,8 +61,8 @@ impl InstallerService {
             platform_service: self.inner.platform_service.clone(),
             id,
             name,
-            version: version.to_owned(),
-            flavor: flavor.to_owned(),
+            version,
+            flavor,
             mono,
         }
     }
@@ -72,8 +75,8 @@ pub struct Installer {
     platform_service: PlatformService,
     id: String,
     name: String,
-    version: String,
-    flavor: String,
+    version: Version,
+    flavor: Flavor,
     mono: bool,
 }
 
@@ -88,8 +91,8 @@ impl Installer {
         let transaction = self.installation_service.create(
             &self.id,
             &self.name,
-            &self.version,
-            &self.flavor,
+            self.version,
+            self.flavor,
             self.mono,
             &platform,
         );
@@ -113,7 +116,7 @@ impl Installer {
         slug: &str,
         platform: &str,
     ) -> Result<PathBuf, TaskError> {
-        let request = DownloadRequest::new(&self.version, &self.flavor, slug, platform);
+        let request = DownloadRequest::new(self.version, self.flavor, slug, platform);
         let mut handle = self
             .download_service
             .download(request, controller.cancellation_token().clone())
@@ -176,11 +179,15 @@ impl Installer {
             .download_configs_provider
             .get_download_configs()
             .await?;
-        let slug = download_configs.get_slug(&self.version, &self.flavor, self.mono, platform)?;
+        let slug = download_configs.get_slug(self.version, self.flavor, self.mono, platform)?;
         Ok(slug)
     }
 
     async fn find_executable(&self, slug: &str, download_path: &Path) -> Result<PathBuf> {
+        let version = self.version.to_string();
+        let flavor = self.flavor.to_string();
+        let slug = slug.strip_suffix(".zip").unwrap_or(slug);
+
         let archive = ZipFile::open(download_path).await?;
         let root_dir = archive.root_dir()?;
         let executable = archive
@@ -191,9 +198,9 @@ impl Installer {
 
                 let mut score = 0;
                 score += file_name.contains("Godot") as i32;
-                score += file_name.contains(&self.version) as i32;
-                score += file_name.contains(&self.flavor) as i32;
-                score += file_name.contains(slug.strip_suffix(".zip").unwrap_or(slug)) as i32 * 5;
+                score += file_name.contains(&version) as i32;
+                score += file_name.contains(&flavor) as i32;
+                score += file_name.contains(slug) as i32 * 5;
                 score -= file_name.contains("console") as i32;
                 score
             })
@@ -215,8 +222,8 @@ impl Installer {
 pub struct InstallerState {
     pub id: String,
     pub name: String,
-    pub version: String,
-    pub flavor: String,
+    pub version: Version,
+    pub flavor: Flavor,
     pub mono: bool,
 }
 
@@ -229,8 +236,8 @@ where
         Self {
             id: value.id.clone(),
             name: value.name.clone(),
-            version: value.version.clone(),
-            flavor: value.flavor.clone(),
+            version: value.version,
+            flavor: value.flavor,
             mono: value.mono,
         }
     }

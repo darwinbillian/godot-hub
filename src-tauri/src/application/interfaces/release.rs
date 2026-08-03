@@ -1,12 +1,14 @@
 use anyhow::Result;
 
+use crate::domain::models::version::{Flavor, Version};
+
 #[async_trait::async_trait]
 pub trait ReleaseProvider {
     async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>>;
 }
 
 pub struct ReleaseMetadata {
-    pub version: String,
-    pub flavor: String,
+    pub version: Version,
+    pub flavor: Flavor,
     pub release_notes: String,
 }
