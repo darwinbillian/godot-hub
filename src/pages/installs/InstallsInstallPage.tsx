@@ -14,12 +14,30 @@ import {
   OctagonAlertIcon,
   PlayIcon,
 } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 export default function InstallsInstallPage() {
   const [releases, setReleases] = useState<Release[]>();
   const [search, setSearch] = useState("");
+
+  const indexedReleases = useMemo(
+    () =>
+      releases?.map((release) => ({
+        release,
+        term: release.name.toLowerCase(),
+      })),
+    [releases],
+  );
+
+  const filteredReleases = useMemo(() => {
+    const searchTokens = search.toLowerCase().split(/\s+/);
+    return indexedReleases
+      ?.filter(({ term }) =>
+        searchTokens.every((token) => term.includes(token)),
+      )
+      .map(({ release }) => release);
+  }, [indexedReleases, search]);
 
   const updateReleases = () => {
     list()
@@ -74,10 +92,6 @@ export default function InstallsInstallPage() {
     if (!releases?.length) {
       return null;
     }
-
-    const filteredReleases = releases.filter((release) =>
-      release.name.toLowerCase().includes(search.toLowerCase()),
-    );
 
     if (!filteredReleases?.length) {
       return (

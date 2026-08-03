@@ -29,12 +29,30 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
 export default function InstallsListPage() {
   const [installs, setInstalls] = useState<Install[]>();
   const [search, setSearch] = useState("");
+
+  const indexedInstalls = useMemo(
+    () =>
+      installs?.map((install) => ({
+        install,
+        term: install.name.toLowerCase(),
+      })),
+    [installs],
+  );
+
+  const filteredInstalls = useMemo(() => {
+    const searchTokens = search.toLowerCase().split(/\s+/);
+    return indexedInstalls
+      ?.filter(({ term }) =>
+        searchTokens.every((token) => term.includes(token)),
+      )
+      .map(({ install }) => install);
+  }, [indexedInstalls, search]);
 
   const updateInstalls = () => {
     list()
@@ -92,11 +110,7 @@ export default function InstallsListPage() {
       );
     }
 
-    const filteredInstalls = installs.filter((install) =>
-      install.name.toLowerCase().includes(search.toLowerCase()),
-    );
-
-    if (!filteredInstalls.length) {
+    if (!filteredInstalls?.length) {
       return (
         <div className="flex flex-col items-center gap-2 py-32 text-sm">
           <h2 className="font-semibold">No results</h2>
