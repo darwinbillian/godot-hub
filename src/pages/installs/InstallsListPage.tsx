@@ -40,7 +40,9 @@ export default function InstallsListPage() {
     () =>
       installs?.map((install) => ({
         install,
-        term: install.name.toLowerCase(),
+        term: [install.name, install.id]
+          .map((term) => term.toLowerCase())
+          .join(" "),
       })),
     [installs],
   );
@@ -172,7 +174,10 @@ const InstallCard = memo(({ install }: { install: Install }) => {
         <img className="size-8" src="/icon.svg" />
       </div>
       <div className="flex-1">
-        <h2 className="font-semibold">{install.name}</h2>
+        <h2 className="font-semibold">
+          {install.name}{" "}
+          <span className="text-neutral-400">({install.id})</span>
+        </h2>
         <InstallCardBody install={install} />
       </div>
       <div>

@@ -59,7 +59,7 @@ impl ReleaseService {
                     );
 
                     let name = format!(
-                        "Godot {}{}",
+                        "Godot {:.2}{}",
                         metadata.version,
                         if mono { " Mono" } else { "" }
                     );

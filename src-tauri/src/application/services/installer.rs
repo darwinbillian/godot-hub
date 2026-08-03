@@ -53,7 +53,7 @@ impl InstallerService {
 
     pub fn create(&self, version: Version, flavor: Flavor, mono: bool) -> Installer {
         let id = format!("{}-{}{}", version, flavor, if mono { "-mono" } else { "" });
-        let name = format!("Godot {}{}", version, if mono { " Mono" } else { "" });
+        let name = format!("Godot {:.2}{}", version, if mono { " Mono" } else { "" });
         Installer {
             download_configs_provider: self.inner.download_configs_provider.clone(),
             download_service: self.inner.download_service.clone(),

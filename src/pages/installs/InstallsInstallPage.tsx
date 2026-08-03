@@ -25,7 +25,9 @@ export default function InstallsInstallPage() {
     () =>
       releases?.map((release) => ({
         release,
-        term: release.name.toLowerCase(),
+        term: [release.name, release.id]
+          .map((term) => term.toLowerCase())
+          .join(" "),
       })),
     [releases],
   );
@@ -155,7 +157,10 @@ const ReleaseCard = memo(({ release }: { release: Release }) => {
         <img className="size-8" src="/icon.svg" />
       </div>
       <div className="flex-1">
-        <h2 className="font-semibold">{release.name}</h2>
+        <h2 className="font-semibold">
+          {release.name}{" "}
+          <span className="text-neutral-400">({release.id})</span>
+        </h2>
       </div>
       <div>
         <ReleaseCardActions release={release} />
