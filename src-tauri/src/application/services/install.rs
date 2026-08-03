@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{cmp::Reverse, collections::HashMap, sync::Arc};
 
 use anyhow::{Error, Result};
 
@@ -159,7 +159,7 @@ impl InstallService {
         }
 
         let mut installs = installs.into_values().collect::<Vec<Install>>();
-        installs.sort_unstable_by(|a, b| b.id.cmp(&a.id));
+        installs.sort_unstable_by_key(|install| Reverse((install.version, install.flavor)));
         Ok(installs)
     }
 }

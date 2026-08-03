@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use thiserror::Error;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
     pub major: u32,
     pub minor: u32,
@@ -71,7 +71,7 @@ pub enum VersionError {
     ParseError(String),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Flavor {
     pub kind: FlavorKind,
     pub number: Option<u32>,
@@ -103,7 +103,7 @@ impl Display for Flavor {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FlavorKind {
     Dev,
     Alpha,
