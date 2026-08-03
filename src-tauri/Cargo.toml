@@ -1,6 +1,6 @@
 [package]
 name = "godot-hub"
-version = "0.2.3"
+version = "0.2.4"
 description = "Desktop application for managing multiple versions of Godot"
 authors = ["Darwin Billiano"]
 edition = "2021"
