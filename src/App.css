@@ -15,7 +15,7 @@
 
 @layer base {
   ::-webkit-search-cancel-button {
-    @apply appearance-none;
+    @apply hidden;
   }
 }
 
