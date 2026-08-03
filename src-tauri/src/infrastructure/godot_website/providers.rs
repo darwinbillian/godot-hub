@@ -10,7 +10,7 @@ use crate::{
         download_configs::{DownloadConfigs, DownloadConfigsError, DownloadConfigsProvider},
         release::{ReleaseMetadata, ReleaseProvider},
     },
-    domain::models::version::{Flavor, FlavorKind, Version, VersionFlavor},
+    domain::models::version::{Flavor, Version, VersionFlavor},
     infrastructure::godot_website::dtos::DownloadConfigsDto,
 };
 
@@ -30,29 +30,39 @@ impl ReleaseProvider for GodotWebsiteReleaseProvider {
         let releases = self.client.list_versions().await?;
         Ok(releases
             .into_iter()
-            .filter_map(|release| {
-                let (version, flavor) = match (
-                    release.name.parse::<Version>(),
-                    release.flavor.parse::<Flavor>(),
-                ) {
+            .flat_map(|release| {
+                std::iter::once((release.name.clone(), release.flavor, release.release_notes))
+                    .chain(
+                        release
+                            .releases
+                            .into_iter()
+                            .flatten()
+                            .map(move |prerelease| {
+                                (
+                                    release.name.clone(),
+                                    prerelease.name,
+                                    prerelease.release_notes,
+                                )
+                            }),
+                    )
+            })
+            .filter_map(|(version, flavor, release_notes)| {
+                let (version, flavor) = match (version.parse::<Version>(), flavor.parse::<Flavor>())
+                {
                     (Ok(version), Ok(flavor)) => (version, flavor),
                     _ => return None,
                 };
 
-                if flavor.kind != FlavorKind::Stable {
-                    return None;
-                }
-
-                let metadata = ReleaseMetadata {
+                let release = ReleaseMetadata {
                     version,
                     flavor,
                     release_notes: format!(
                         "https://godotengine.org/{}",
-                        release.release_notes.trim_start_matches("/")
+                        release_notes.trim_start_matches('/')
                     ),
                 };
 
-                Some(metadata)
+                Some(release)
             })
             .collect())
     }
