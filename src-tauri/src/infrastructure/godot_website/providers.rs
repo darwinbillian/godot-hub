@@ -10,7 +10,7 @@ use crate::{
         download_configs::{DownloadConfigs, DownloadConfigsError, DownloadConfigsProvider},
         release::{ReleaseMetadata, ReleaseProvider},
     },
-    domain::models::version::{Flavor, FlavorKind, Version},
+    domain::models::version::{Flavor, FlavorKind, Version, VersionFlavor},
     infrastructure::godot_website::dtos::DownloadConfigsDto,
 };
 
@@ -94,10 +94,35 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
         mono: bool,
         platform: &str,
     ) -> Result<String, DownloadConfigsError> {
+        let major = version.major.to_string();
+        let current = VersionFlavor::new(version, flavor);
+
         let editor = self
             .download_configs
-            .defaults
-            .get(&version.major.to_string())
+            .overrides
+            .iter()
+            .rfind(|o| {
+                if o.version != major {
+                    return false;
+                }
+
+                let (lower, upper) = match o.range.as_slice() {
+                    [lower, upper] => (lower, upper),
+                    _ => return false,
+                };
+
+                let (lower, upper) = match (
+                    lower.parse::<VersionFlavor>(),
+                    upper.parse::<VersionFlavor>(),
+                ) {
+                    (Ok(lower), Ok(upper)) => (lower, upper),
+                    _ => return false,
+                };
+
+                current >= lower && current <= upper
+            })
+            .map(|o| &o.config)
+            .or_else(|| self.download_configs.defaults.get(&major))
             .and_then(|config| {
                 if mono {
                     config

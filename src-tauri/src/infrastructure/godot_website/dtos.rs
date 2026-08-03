@@ -34,7 +34,7 @@ pub struct DownloadConfigsDto {
 pub struct DownloadConfigsOverrideDto {
     pub version: String,
     pub range: Vec<String>,
-    pub config: DownloadConfigsItemDto,
+    pub config: DownloadConfigsItemWithMonoDto,
 }
 
 #[allow(dead_code)]

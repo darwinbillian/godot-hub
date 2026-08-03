@@ -3,6 +3,54 @@ use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct VersionFlavor {
+    pub version: Version,
+    pub flavor: Flavor,
+}
+
+impl VersionFlavor {
+    pub fn new(version: Version, flavor: Flavor) -> Self {
+        Self { version, flavor }
+    }
+}
+
+impl FromStr for VersionFlavor {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts = s.split("-").collect::<Vec<&str>>();
+        let (version, flavor) = match parts.as_slice() {
+            [version, flavor] => (version, flavor),
+            _ => {
+                return Err(anyhow::anyhow!(VersionFlavorError::ParseError(
+                    s.to_owned()
+                )))
+            }
+        };
+
+        let value = Self {
+            version: version.parse()?,
+            flavor: flavor.parse()?,
+        };
+
+        Ok(value)
+    }
+}
+
+impl Display for VersionFlavor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}", self.version, self.flavor)?;
+        Ok(())
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum VersionFlavorError {
+    #[error("cannot parse version flavor from '{0}'")]
+    ParseError(String),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version {
     pub major: u32,
     pub minor: u32,

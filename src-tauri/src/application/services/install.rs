@@ -11,7 +11,7 @@ use crate::{
         },
         utils::event::Event,
     },
-    domain::models::version::{Flavor, Version},
+    domain::models::version::{Flavor, Version, VersionFlavor},
 };
 
 #[derive(Clone)]
@@ -159,7 +159,9 @@ impl InstallService {
         }
 
         let mut installs = installs.into_values().collect::<Vec<Install>>();
-        installs.sort_unstable_by_key(|install| Reverse((install.version, install.flavor)));
+        installs.sort_unstable_by_key(|install| {
+            Reverse(VersionFlavor::new(install.version, install.flavor))
+        });
         Ok(installs)
     }
 }
