@@ -29,7 +29,7 @@ impl From<Release> for ReleaseDto {
             variant: value.variant.to_string(),
             release_notes: value.release_notes,
             status: value.status.into(),
-            install: value.install.map(InstallDto::from),
+            install: value.install.map(Into::into),
         }
     }
 }

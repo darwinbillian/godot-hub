@@ -85,15 +85,15 @@ impl InstallationService {
                 dir,
                 id,
                 name: metadata.name,
-                version: metadata.version.parse::<Version>()?,
-                flavor: metadata.flavor.parse::<Flavor>()?,
+                version: metadata.version.parse()?,
+                flavor: metadata.flavor.parse()?,
                 variant: if metadata.mono {
                     Variant::Mono
                 } else {
                     Variant::Standard
                 },
                 platform: metadata.platform,
-                executable: PathBuf::from(metadata.executable),
+                executable: metadata.executable.into(),
             };
 
             installations.push(installation);

@@ -26,8 +26,15 @@ pub async fn installs_install(
 
 #[tauri::command(rename = "installs::list")]
 pub async fn installs_list(state: State<'_, AppState>) -> Result<Vec<InstallDto>, ErrorDto> {
-    let installs = state.install_service.list().await?;
-    Ok(installs.into_iter().map(InstallDto::from).collect())
+    let installs = state
+        .install_service
+        .list()
+        .await?
+        .into_iter()
+        .map(InstallDto::from)
+        .collect::<Vec<InstallDto>>();
+
+    Ok(installs)
 }
 
 #[tauri::command(rename = "installs::launch")]

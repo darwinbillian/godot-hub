@@ -100,7 +100,7 @@ impl From<DownloadConfigGroupDto> for DownloadConfigGroup {
     fn from(value: DownloadConfigGroupDto) -> Self {
         Self {
             standard: value.standard.into(),
-            mono: value.mono.map(DownloadConfig::from),
+            mono: value.mono.map(Into::into),
         }
     }
 }

@@ -24,8 +24,10 @@ impl GodotWebsiteReleaseProvider {
 #[async_trait::async_trait]
 impl ReleaseProvider for GodotWebsiteReleaseProvider {
     async fn list_releases(&self) -> Result<Vec<ReleaseMetadata>> {
-        let releases = self.client.list_versions().await?;
-        Ok(releases
+        let releases = self
+            .client
+            .list_versions()
+            .await?
             .into_iter()
             .flat_map(|release| {
                 std::iter::once((release.name.clone(), release.flavor, release.release_notes))
@@ -58,7 +60,9 @@ impl ReleaseProvider for GodotWebsiteReleaseProvider {
 
                 Some(release)
             })
-            .collect())
+            .collect::<Vec<ReleaseMetadata>>();
+
+        Ok(releases)
     }
 }
 

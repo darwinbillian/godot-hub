@@ -25,9 +25,11 @@ impl ZipFile {
         })
         .await??;
 
-        Ok(Self {
+        let result = Self {
             archive: Arc::new(Mutex::new(archive)),
-        })
+        };
+
+        Ok(result)
     }
 
     pub async fn extract_unwrapped_root_dir<D>(&self, directory: D) -> Result<()>

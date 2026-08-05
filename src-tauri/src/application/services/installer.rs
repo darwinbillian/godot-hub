@@ -206,11 +206,9 @@ impl Installer {
             })
             .map(|executable| {
                 let executable = PathBuf::from(executable);
-
-                if let Some(root_dir) = &root_dir {
-                    executable.strip_prefix(root_dir).unwrap().to_owned()
-                } else {
-                    executable
+                match &root_dir {
+                    Some(root_dir) => executable.strip_prefix(root_dir).unwrap().to_owned(),
+                    None => executable,
                 }
             })
             .ok_or(InstallerError::ExecutableNotFound)?;

@@ -17,7 +17,8 @@ impl DirectoryGuard {
     {
         let path = path.into();
         tokio::fs::create_dir_all(&path).await?;
-        Ok(Self { path: Some(path) })
+        let result = Self { path: Some(path) };
+        Ok(result)
     }
 
     pub fn disarm(&mut self) {
@@ -45,10 +46,13 @@ impl FileGuard {
     {
         let path = path.into();
         let file = File::create(&path).await?;
-        Ok(Self {
+
+        let result = Self {
             path: Some(path),
             file: Some(file),
-        })
+        };
+
+        Ok(result)
     }
 
     pub fn disarm(&mut self) {

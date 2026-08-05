@@ -123,45 +123,53 @@ impl InstallService {
     }
 
     pub async fn list(&self) -> Result<Vec<Install>> {
-        let mut installs = HashMap::<String, Install>::new();
-
-        let installations = self.inner.installation_service.list().await?;
-        let tasks = self.inner.task_service.list();
-
-        for task in tasks {
-            let status = match task.status {
-                TaskStatus::Paused(progress) => InstallStatus::Paused(progress),
-                TaskStatus::Running(progress) => InstallStatus::Installing(progress),
-                TaskStatus::Failed(e) => InstallStatus::Failed(e),
-                _ => continue,
-            };
-
-            let install = Install {
-                id: task.state.id.clone(),
-                name: task.state.name.clone(),
-                version: task.state.version,
-                flavor: task.state.flavor,
-                variant: task.state.variant,
-                status,
-            };
-
-            installs.insert(install.id.clone(), install);
-        }
-
-        for installation in installations {
-            let install = Install {
+        let installations = self
+            .inner
+            .installation_service
+            .list()
+            .await?
+            .into_iter()
+            .map(|installation| Install {
                 id: installation.id.clone(),
                 name: installation.name.clone(),
                 version: installation.version,
                 flavor: installation.flavor,
                 variant: installation.variant,
                 status: InstallStatus::Installed(Arc::new(installation)),
-            };
+            });
 
-            installs.insert(install.id.clone(), install);
-        }
+        let tasks = self
+            .inner
+            .task_service
+            .list()
+            .into_iter()
+            .filter_map(|task| {
+                let status = match task.status {
+                    TaskStatus::Paused(progress) => InstallStatus::Paused(progress),
+                    TaskStatus::Running(progress) => InstallStatus::Installing(progress),
+                    TaskStatus::Failed(e) => InstallStatus::Failed(e),
+                    _ => return None,
+                };
 
-        let mut installs = installs.into_values().collect::<Vec<Install>>();
+                let install = Install {
+                    id: task.state.id.clone(),
+                    name: task.state.name.clone(),
+                    version: task.state.version,
+                    flavor: task.state.flavor,
+                    variant: task.state.variant,
+                    status,
+                };
+
+                Some(install)
+            });
+
+        let mut installs = tasks
+            .chain(installations)
+            .map(|install| (install.id.clone(), install))
+            .collect::<HashMap<String, Install>>()
+            .into_values()
+            .collect::<Vec<Install>>();
+
         installs.sort_unstable_by_key(|install| {
             Reverse(VersionFlavorVariant::new(
                 install.version,
@@ -169,6 +177,7 @@ impl InstallService {
                 install.variant,
             ))
         });
+
         Ok(installs)
     }
 }

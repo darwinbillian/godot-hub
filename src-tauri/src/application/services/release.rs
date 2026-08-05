@@ -45,9 +45,25 @@ impl ReleaseService {
             .get_download_configs()
             .await?;
 
-        let installs = self.list_installs().await?;
-        let releases = self.release_provider.list_releases().await?;
-        Ok(releases
+        let installs = self
+            .install_service
+            .list()
+            .await?
+            .into_iter()
+            .map(|install| {
+                let id = format!(
+                    "{}",
+                    VersionFlavorVariant::new(install.version, install.flavor, install.variant)
+                );
+
+                (id, install)
+            })
+            .collect::<HashMap<String, Install>>();
+
+        let releases = self
+            .release_provider
+            .list_releases()
+            .await?
             .iter()
             .flat_map(|metadata| {
                 Variant::iter().filter_map(|variant| {
@@ -92,22 +108,9 @@ impl ReleaseService {
                     Some(release)
                 })
             })
-            .collect())
-    }
+            .collect::<Vec<Release>>();
 
-    async fn list_installs(&self) -> Result<HashMap<String, Install>> {
-        let installs = self.install_service.list().await?;
-        Ok(installs
-            .into_iter()
-            .map(|install| {
-                let id = format!(
-                    "{}",
-                    VersionFlavorVariant::new(install.version, install.flavor, install.variant)
-                );
-
-                (id, install)
-            })
-            .collect())
+        Ok(releases)
     }
 }
 
