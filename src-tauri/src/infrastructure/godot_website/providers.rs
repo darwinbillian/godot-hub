@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::{Error, Result};
 use tokio_stream::StreamExt;
 
@@ -7,11 +5,10 @@ use super::client::GodotWebsiteClient;
 use crate::{
     application::interfaces::{
         download::{DownloadProvider, DownloadRequest, DownloadResponse},
-        download_configs::{DownloadConfigs, DownloadConfigsError, DownloadConfigsProvider},
+        download_configs::{DownloadConfigs, DownloadConfigsProvider},
         release::{ReleaseMetadata, ReleaseProvider},
     },
-    domain::models::version::{Flavor, Variant, Version, VersionFlavor, VersionFlavorVariant},
-    infrastructure::godot_website::dtos::DownloadConfigsDto,
+    domain::models::version::{Flavor, Version},
 };
 
 pub struct GodotWebsiteReleaseProvider {
@@ -47,11 +44,8 @@ impl ReleaseProvider for GodotWebsiteReleaseProvider {
                     )
             })
             .filter_map(|(version, flavor, release_notes)| {
-                let (version, flavor) = match (version.parse::<Version>(), flavor.parse::<Flavor>())
-                {
-                    (Ok(version), Ok(flavor)) => (version, flavor),
-                    _ => return None,
-                };
+                let version = version.parse::<Version>().ok()?;
+                let flavor = flavor.parse::<Flavor>().ok()?;
 
                 let release = ReleaseMetadata {
                     version,
@@ -80,88 +74,9 @@ impl GodotWebsiteDownloadConfigsProvider {
 
 #[async_trait::async_trait]
 impl DownloadConfigsProvider for GodotWebsiteDownloadConfigsProvider {
-    async fn get_download_configs(&self) -> Result<Arc<dyn DownloadConfigs + Send + Sync>> {
+    async fn get_download_configs(&self) -> Result<DownloadConfigs> {
         let download_configs = self.client.get_download_configs().await?;
-        Ok(Arc::new(GodotWebsiteDownloadConfigs::new(download_configs)))
-    }
-}
-
-pub struct GodotWebsiteDownloadConfigs {
-    download_configs: DownloadConfigsDto,
-}
-
-impl GodotWebsiteDownloadConfigs {
-    pub fn new(download_configs: DownloadConfigsDto) -> Self {
-        Self { download_configs }
-    }
-}
-
-impl DownloadConfigs for GodotWebsiteDownloadConfigs {
-    fn get_slug(
-        &self,
-        version: Version,
-        flavor: Flavor,
-        variant: Variant,
-        platform: &str,
-    ) -> Result<String, DownloadConfigsError> {
-        let major = version.major.to_string();
-        let current = VersionFlavor::new(version, flavor);
-
-        let group = self
-            .download_configs
-            .overrides
-            .iter()
-            .rfind(|o| {
-                if o.version != major {
-                    return false;
-                }
-
-                let (lower, upper) = match o.range.as_slice() {
-                    [lower, upper] => (lower, upper),
-                    _ => return false,
-                };
-
-                let (lower, upper) = match (
-                    lower.parse::<VersionFlavor>(),
-                    upper.parse::<VersionFlavor>(),
-                ) {
-                    (Ok(lower), Ok(upper)) => (lower, upper),
-                    _ => return false,
-                };
-
-                current >= lower && current <= upper
-            })
-            .map(|o| &o.config)
-            .or_else(|| self.download_configs.defaults.get(&major))
-            .ok_or_else(|| {
-                DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
-                    version, flavor, variant,
-                ))
-            })?;
-
-        let download_config = match variant {
-            Variant::Standard => &group.standard,
-            Variant::Mono => group.mono.as_ref().ok_or_else(|| {
-                DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
-                    version, flavor, variant,
-                ))
-            })?,
-        };
-
-        let editor = download_config.editor.as_ref().ok_or_else(|| {
-            DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
-                version, flavor, variant,
-            ))
-        })?;
-
-        let slug = editor.get(platform).ok_or_else(|| {
-            DownloadConfigsError::ReleaseNotAvailableForPlatform(
-                VersionFlavorVariant::new(version, flavor, variant),
-                platform.to_owned(),
-            )
-        })?;
-
-        Ok(slug.to_owned())
+        Ok(download_configs.try_into()?)
     }
 }
 
