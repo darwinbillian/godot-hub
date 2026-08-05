@@ -5,7 +5,7 @@ export interface Install {
   name: string;
   version: string;
   flavor: string;
-  mono: boolean;
+  variant: string;
   status: InstallStatus;
 }
 

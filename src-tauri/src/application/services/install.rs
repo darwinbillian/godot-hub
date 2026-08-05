@@ -11,7 +11,7 @@ use crate::{
         },
         utils::event::Event,
     },
-    domain::models::version::{Flavor, Version, VersionFlavor},
+    domain::models::version::{Flavor, Variant, Version, VersionFlavorVariant},
 };
 
 #[derive(Clone)]
@@ -106,8 +106,11 @@ impl InstallService {
         &self.inner.remove_event
     }
 
-    pub async fn install(&self, version: Version, flavor: Flavor, mono: bool) -> Result<()> {
-        let installer = self.inner.installer_service.create(version, flavor, mono);
+    pub async fn install(&self, version: Version, flavor: Flavor, variant: Variant) -> Result<()> {
+        let installer = self
+            .inner
+            .installer_service
+            .create(version, flavor, variant);
         let state = InstallerState::from(&installer);
         let task = Task::new(&state.id.clone(), state);
 
@@ -138,7 +141,7 @@ impl InstallService {
                 name: task.state.name.clone(),
                 version: task.state.version,
                 flavor: task.state.flavor,
-                mono: task.state.mono,
+                variant: task.state.variant,
                 status,
             };
 
@@ -151,7 +154,7 @@ impl InstallService {
                 name: installation.name.clone(),
                 version: installation.version,
                 flavor: installation.flavor,
-                mono: installation.mono,
+                variant: installation.variant,
                 status: InstallStatus::Installed(Arc::new(installation)),
             };
 
@@ -160,7 +163,11 @@ impl InstallService {
 
         let mut installs = installs.into_values().collect::<Vec<Install>>();
         installs.sort_unstable_by_key(|install| {
-            Reverse(VersionFlavor::new(install.version, install.flavor))
+            Reverse(VersionFlavorVariant::new(
+                install.version,
+                install.flavor,
+                install.variant,
+            ))
         });
         Ok(installs)
     }
@@ -172,7 +179,7 @@ pub struct Install {
     pub name: String,
     pub version: Version,
     pub flavor: Flavor,
-    pub mono: bool,
+    pub variant: Variant,
     pub status: InstallStatus,
 }
 

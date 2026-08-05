@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use thiserror::Error;
 
-use crate::domain::models::version::{Flavor, Version};
+use crate::domain::models::version::{Flavor, Variant, Version, VersionFlavorVariant};
 
 #[async_trait::async_trait]
 pub trait DownloadConfigsProvider {
@@ -15,15 +15,15 @@ pub trait DownloadConfigs {
         &self,
         version: Version,
         flavor: Flavor,
-        mono: bool,
+        variant: Variant,
         platform: &str,
     ) -> Result<String, DownloadConfigsError>;
 }
 
 #[derive(Error, Debug)]
 pub enum DownloadConfigsError {
-    #[error("release '{0}-{1}' is not available")]
-    ReleaseNotAvailable(Version, Flavor),
-    #[error("release '{0}-{1}' is not available for platform '{2}'")]
-    ReleaseNotAvailableForPlatform(Version, Flavor, String),
+    #[error("release '{0}' is not available")]
+    ReleaseNotAvailable(VersionFlavorVariant),
+    #[error("release '{0}' is not available for platform '{1}'")]
+    ReleaseNotAvailableForPlatform(VersionFlavorVariant, String),
 }

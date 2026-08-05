@@ -439,7 +439,7 @@ function RetryButton({ install: item }: { install: Install }) {
       className="btn btn-ghost p-1"
       title="Retry"
       onClick={() => {
-        install(item.version, item.flavor, item.mono).catch((e) =>
+        install(item.version, item.flavor, item.variant).catch((e) =>
           console.error(e),
         );
       }}

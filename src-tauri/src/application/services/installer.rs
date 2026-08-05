@@ -20,7 +20,7 @@ use crate::{
         },
         utils::{fs::DirectoryGuard, zip::ZipFile},
     },
-    domain::models::version::{Flavor, FlavorKind, Version},
+    domain::models::version::{Flavor, FlavorKind, Variant, Version},
 };
 
 pub struct InstallerService {
@@ -51,8 +51,17 @@ impl InstallerService {
         }
     }
 
-    pub fn create(&self, version: Version, flavor: Flavor, mono: bool) -> Installer {
-        let id = format!("{}-{}{}", version, flavor, if mono { "-mono" } else { "" });
+    pub fn create(&self, version: Version, flavor: Flavor, variant: Variant) -> Installer {
+        let id = format!(
+            "{}-{}{}",
+            version,
+            flavor,
+            match variant {
+                Variant::Standard => "",
+                Variant::Mono => "-mono",
+            }
+        );
+
         let name = format!(
             "Godot {:.2}{}{}",
             version,
@@ -63,8 +72,12 @@ impl InstallerService {
                 FlavorKind::Rc => " Rc",
                 FlavorKind::Stable => "",
             },
-            if mono { " Mono" } else { "" }
+            match variant {
+                Variant::Standard => "",
+                Variant::Mono => " Mono",
+            }
         );
+
         Installer {
             download_configs_provider: self.inner.download_configs_provider.clone(),
             download_service: self.inner.download_service.clone(),
@@ -74,7 +87,7 @@ impl InstallerService {
             name,
             version,
             flavor,
-            mono,
+            variant,
         }
     }
 }
@@ -88,7 +101,7 @@ pub struct Installer {
     name: String,
     version: Version,
     flavor: Flavor,
-    mono: bool,
+    variant: Variant,
 }
 
 impl Installer {
@@ -104,7 +117,7 @@ impl Installer {
             &self.name,
             self.version,
             self.flavor,
-            self.mono,
+            self.variant,
             &platform,
         );
 
@@ -190,7 +203,7 @@ impl Installer {
             .download_configs_provider
             .get_download_configs()
             .await?;
-        let slug = download_configs.get_slug(self.version, self.flavor, self.mono, platform)?;
+        let slug = download_configs.get_slug(self.version, self.flavor, self.variant, platform)?;
         Ok(slug)
     }
 
@@ -235,7 +248,7 @@ pub struct InstallerState {
     pub name: String,
     pub version: Version,
     pub flavor: Flavor,
-    pub mono: bool,
+    pub variant: Variant,
 }
 
 impl<I> From<I> for InstallerState
@@ -249,7 +262,7 @@ where
             name: value.name.clone(),
             version: value.version,
             flavor: value.flavor,
-            mono: value.mono,
+            variant: value.variant,
         }
     }
 }

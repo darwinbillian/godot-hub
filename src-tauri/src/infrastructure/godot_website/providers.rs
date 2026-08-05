@@ -10,7 +10,7 @@ use crate::{
         download_configs::{DownloadConfigs, DownloadConfigsError, DownloadConfigsProvider},
         release::{ReleaseMetadata, ReleaseProvider},
     },
-    domain::models::version::{Flavor, Version, VersionFlavor},
+    domain::models::version::{Flavor, Variant, Version, VersionFlavor, VersionFlavorVariant},
     infrastructure::godot_website::dtos::DownloadConfigsDto,
 };
 
@@ -101,7 +101,7 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
         &self,
         version: Version,
         flavor: Flavor,
-        mono: bool,
+        variant: Variant,
         platform: &str,
     ) -> Result<String, DownloadConfigsError> {
         let major = version.major.to_string();
@@ -133,22 +133,22 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
             })
             .map(|o| &o.config)
             .or_else(|| self.download_configs.defaults.get(&major))
-            .and_then(|config| {
-                if mono {
-                    config
-                        .mono
-                        .as_ref()
-                        .and_then(|config| config.editor.as_ref())
-                } else {
-                    config.editor.as_ref()
-                }
+            .and_then(|config| match variant {
+                Variant::Standard => config.editor.as_ref(),
+                Variant::Mono => config
+                    .mono
+                    .as_ref()
+                    .and_then(|config| config.editor.as_ref()),
             })
-            .ok_or(DownloadConfigsError::ReleaseNotAvailable(version, flavor))?;
+            .ok_or_else(|| {
+                DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
+                    version, flavor, variant,
+                ))
+            })?;
 
         let slug = editor.get(platform).ok_or_else(|| {
             DownloadConfigsError::ReleaseNotAvailableForPlatform(
-                version,
-                flavor,
+                VersionFlavorVariant::new(version, flavor, variant),
                 platform.to_owned(),
             )
         })?;

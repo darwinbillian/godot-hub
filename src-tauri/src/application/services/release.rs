@@ -13,7 +13,7 @@ use crate::{
             platform::PlatformService,
         },
     },
-    domain::models::version::{Flavor, FlavorKind, Version},
+    domain::models::version::{Flavor, FlavorKind, Variant, Version},
 };
 
 pub struct ReleaseService {
@@ -50,12 +50,15 @@ impl ReleaseService {
         Ok(releases
             .iter()
             .flat_map(|metadata| {
-                [false, true].into_iter().filter_map(|mono| {
+                Variant::iter().filter_map(|variant| {
                     let id = format!(
                         "{}-{}{}",
                         metadata.version,
                         metadata.flavor,
-                        if mono { "-mono" } else { "" }
+                        match variant {
+                            Variant::Standard => "",
+                            Variant::Mono => "-mono",
+                        }
                     );
 
                     let name = format!(
@@ -68,18 +71,21 @@ impl ReleaseService {
                             FlavorKind::Rc => " Rc",
                             FlavorKind::Stable => "",
                         },
-                        if mono { " Mono" } else { "" }
+                        match variant {
+                            Variant::Standard => "",
+                            Variant::Mono => " Mono",
+                        }
                     );
 
                     let status = match download_configs.get_slug(
                         metadata.version,
                         metadata.flavor,
-                        mono,
+                        variant,
                         &platform,
                     ) {
                         Ok(_) => ReleaseStatus::Available,
                         Err(e) => match e {
-                            DownloadConfigsError::ReleaseNotAvailableForPlatform(_, _, _) => {
+                            DownloadConfigsError::ReleaseNotAvailableForPlatform(_, _) => {
                                 ReleaseStatus::Unavailable
                             }
                             _ => return None,
@@ -93,7 +99,7 @@ impl ReleaseService {
                         name,
                         version: metadata.version,
                         flavor: metadata.flavor,
-                        mono,
+                        variant,
                         release_notes: metadata.release_notes.clone(),
                         status,
                         install,
@@ -114,7 +120,10 @@ impl ReleaseService {
                     "{}-{}{}",
                     install.version,
                     install.flavor,
-                    if install.mono { "-mono" } else { "" }
+                    match install.variant {
+                        Variant::Standard => "",
+                        Variant::Mono => "-mono",
+                    }
                 );
                 (id, install)
             })
@@ -127,7 +136,7 @@ pub struct Release {
     pub name: String,
     pub version: Version,
     pub flavor: Flavor,
-    pub mono: bool,
+    pub variant: Variant,
     pub release_notes: String,
     pub status: ReleaseStatus,
     pub install: Option<Install>,

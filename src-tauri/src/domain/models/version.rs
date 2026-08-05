@@ -3,6 +3,33 @@ use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct VersionFlavorVariant {
+    pub version: Version,
+    pub flavor: Flavor,
+    pub variant: Variant,
+}
+
+impl VersionFlavorVariant {
+    pub fn new(version: Version, flavor: Flavor, variant: Variant) -> Self {
+        Self {
+            version,
+            flavor,
+            variant,
+        }
+    }
+}
+
+impl Display for VersionFlavorVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}", self.version, self.flavor);
+        if self.variant != Variant::Standard {
+            write!(f, "-{}", self.variant)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VersionFlavor {
     pub version: Version,
     pub flavor: Flavor,
@@ -195,5 +222,49 @@ impl Display for FlavorKind {
 #[derive(Error, Debug)]
 pub enum FlavorError {
     #[error("unknown flavor kind '{0}'")]
+    UnknownKind(String),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Variant {
+    Standard,
+    Mono,
+}
+
+impl Variant {
+    pub fn iter() -> impl Iterator<Item = Variant> {
+        [Variant::Standard, Variant::Mono].into_iter()
+    }
+}
+
+impl FromStr for Variant {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let kind = match s {
+            "standard" => Self::Standard,
+            "mono" => Self::Mono,
+            _ => return Err(anyhow::anyhow!(VariantError::UnknownKind(s.to_owned()))),
+        };
+
+        Ok(kind)
+    }
+}
+
+impl Display for Variant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let kind = match self {
+            Self::Standard => "standard",
+            Self::Mono => "mono",
+        };
+
+        write!(f, "{}", kind)?;
+        Ok(())
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum VariantError {
+    #[error("unknown variant kind '{0}'")]
     UnknownKind(String),
 }

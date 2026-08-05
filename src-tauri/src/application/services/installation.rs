@@ -9,7 +9,7 @@ use tokio::process::Command;
 
 use crate::{
     application::utils::event::Event,
-    domain::models::version::{Flavor, Version},
+    domain::models::version::{Flavor, Variant, Version},
 };
 
 #[derive(Clone)]
@@ -42,7 +42,7 @@ impl InstallationService {
         name: &str,
         version: Version,
         flavor: Flavor,
-        mono: bool,
+        variant: Variant,
         platform: &str,
     ) -> InstallationTransaction {
         InstallationTransaction {
@@ -51,7 +51,7 @@ impl InstallationService {
             name: name.to_owned(),
             version,
             flavor,
-            mono,
+            variant,
             platform: platform.to_owned(),
         }
     }
@@ -87,7 +87,11 @@ impl InstallationService {
                 name: metadata.name,
                 version: metadata.version.parse::<Version>()?,
                 flavor: metadata.flavor.parse::<Flavor>()?,
-                mono: metadata.mono,
+                variant: if metadata.mono {
+                    Variant::Mono
+                } else {
+                    Variant::Standard
+                },
                 platform: metadata.platform,
                 executable: PathBuf::from(metadata.executable),
             };
@@ -117,7 +121,7 @@ pub struct Installation {
     pub name: String,
     pub version: Version,
     pub flavor: Flavor,
-    pub mono: bool,
+    pub variant: Variant,
     pub platform: String,
     pub executable: PathBuf,
 }
@@ -171,7 +175,7 @@ pub struct InstallationTransaction {
     name: String,
     version: Version,
     flavor: Flavor,
-    mono: bool,
+    variant: Variant,
     platform: String,
 }
 
@@ -187,7 +191,7 @@ impl InstallationTransaction {
             name: self.name,
             version: self.version,
             flavor: self.flavor,
-            mono: self.mono,
+            variant: self.variant,
             platform: self.platform,
             executable: executable.to_owned(),
         };
@@ -196,7 +200,10 @@ impl InstallationTransaction {
             name: installation.name.clone(),
             version: installation.version.to_string(),
             flavor: installation.flavor.to_string(),
-            mono: installation.mono,
+            mono: match installation.variant {
+                Variant::Standard => false,
+                Variant::Mono => true,
+            },
             platform: installation.platform.clone(),
             executable: installation
                 .executable

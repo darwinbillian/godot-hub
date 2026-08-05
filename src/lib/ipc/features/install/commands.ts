@@ -4,12 +4,12 @@ import { Install } from "./types";
 export function install(
   version: string,
   flavor: string,
-  mono: boolean,
+  variant: string,
 ): Promise<void> {
   return invoke<void>("installs::install", {
     version,
     flavor,
-    mono,
+    variant,
   });
 }
 

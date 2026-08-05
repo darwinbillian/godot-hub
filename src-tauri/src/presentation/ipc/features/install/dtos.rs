@@ -21,7 +21,7 @@ pub struct InstallDto {
     name: String,
     version: String,
     flavor: String,
-    mono: bool,
+    variant: String,
     status: InstallStatusDto,
 }
 
@@ -32,7 +32,7 @@ impl From<Install> for InstallDto {
             name: value.name,
             version: value.version.to_string(),
             flavor: value.flavor.to_string(),
-            mono: value.mono,
+            variant: value.variant.to_string(),
             status: value.status.into(),
         }
     }
