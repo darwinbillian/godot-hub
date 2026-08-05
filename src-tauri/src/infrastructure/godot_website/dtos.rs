@@ -25,30 +25,29 @@ pub struct VersionReleaseDto {
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct DownloadConfigsDto {
-    pub defaults: HashMap<String, DownloadConfigsItemWithMonoDto>,
-    pub overrides: Vec<DownloadConfigsOverrideDto>,
+    pub defaults: HashMap<String, DownloadConfigGroupDto>,
+    pub overrides: Vec<DownloadConfigOverrideDto>,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-pub struct DownloadConfigsOverrideDto {
+pub struct DownloadConfigOverrideDto {
     pub version: String,
     pub range: Vec<String>,
-    pub config: DownloadConfigsItemWithMonoDto,
+    pub config: DownloadConfigGroupDto,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-pub struct DownloadConfigsItemWithMonoDto {
-    pub templates: Option<String>,
-    pub editor: Option<HashMap<String, String>>,
-    pub extras: Option<HashMap<String, String>>,
-    pub mono: Option<DownloadConfigsItemDto>,
+pub struct DownloadConfigGroupDto {
+    #[serde(flatten)]
+    pub standard: DownloadConfigDto,
+    pub mono: Option<DownloadConfigDto>,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-pub struct DownloadConfigsItemDto {
+pub struct DownloadConfigDto {
     pub templates: Option<String>,
     pub editor: Option<HashMap<String, String>>,
     pub extras: Option<HashMap<String, String>>,

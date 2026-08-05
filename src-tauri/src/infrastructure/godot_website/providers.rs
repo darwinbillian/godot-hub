@@ -107,7 +107,7 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
         let major = version.major.to_string();
         let current = VersionFlavor::new(version, flavor);
 
-        let editor = self
+        let group = self
             .download_configs
             .overrides
             .iter()
@@ -133,18 +133,26 @@ impl DownloadConfigs for GodotWebsiteDownloadConfigs {
             })
             .map(|o| &o.config)
             .or_else(|| self.download_configs.defaults.get(&major))
-            .and_then(|config| match variant {
-                Variant::Standard => config.editor.as_ref(),
-                Variant::Mono => config
-                    .mono
-                    .as_ref()
-                    .and_then(|config| config.editor.as_ref()),
-            })
             .ok_or_else(|| {
                 DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
                     version, flavor, variant,
                 ))
             })?;
+
+        let download_config = match variant {
+            Variant::Standard => &group.standard,
+            Variant::Mono => group.mono.as_ref().ok_or_else(|| {
+                DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
+                    version, flavor, variant,
+                ))
+            })?,
+        };
+
+        let editor = download_config.editor.as_ref().ok_or_else(|| {
+            DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
+                version, flavor, variant,
+            ))
+        })?;
 
         let slug = editor.get(platform).ok_or_else(|| {
             DownloadConfigsError::ReleaseNotAvailableForPlatform(
