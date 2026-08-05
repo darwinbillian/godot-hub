@@ -21,10 +21,21 @@ impl VersionFlavorVariant {
 
 impl Display for VersionFlavorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-{}", self.version, self.flavor);
-        if self.variant != Variant::Standard {
-            write!(f, "-{}", self.variant)?;
+        if f.alternate() {
+            write!(f, "Godot {:.2}", self.version)?;
+            if self.flavor.kind != FlavorKind::Stable {
+                write!(f, " {:#}", self.flavor)?;
+            }
+            if self.variant != Variant::Standard {
+                write!(f, " {:#}", self.variant)?;
+            }
+        } else {
+            write!(f, "{}-{}", self.version, self.flavor)?;
+            if self.variant != Variant::Standard {
+                write!(f, "-{}", self.variant)?;
+            }
         }
+
         Ok(())
     }
 }
@@ -170,10 +181,15 @@ impl FromStr for Flavor {
 
 impl Display for Flavor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.kind)?;
-        if let Some(number) = self.number {
-            write!(f, "{}", number)?;
+        if f.alternate() {
+            write!(f, "{:#}", self.kind)?;
+        } else {
+            write!(f, "{}", self.kind)?;
+            if let Some(number) = self.number {
+                write!(f, "{}", number)?;
+            }
         }
+
         Ok(())
     }
 }
@@ -206,15 +222,24 @@ impl FromStr for FlavorKind {
 
 impl Display for FlavorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let kind = match self {
-            Self::Dev => "dev",
-            Self::Alpha => "alpha",
-            Self::Beta => "beta",
-            Self::Rc => "rc",
-            Self::Stable => "stable",
-        };
+        if f.alternate() {
+            match self {
+                Self::Dev => write!(f, "Dev")?,
+                Self::Alpha => write!(f, "Alpha")?,
+                Self::Beta => write!(f, "Beta")?,
+                Self::Rc => write!(f, "Rc")?,
+                Self::Stable => write!(f, "Stable")?,
+            };
+        } else {
+            match self {
+                Self::Dev => write!(f, "dev")?,
+                Self::Alpha => write!(f, "alpha")?,
+                Self::Beta => write!(f, "beta")?,
+                Self::Rc => write!(f, "rc")?,
+                Self::Stable => write!(f, "stable")?,
+            };
+        }
 
-        write!(f, "{}", kind)?;
         Ok(())
     }
 }
@@ -253,12 +278,18 @@ impl FromStr for Variant {
 
 impl Display for Variant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let kind = match self {
-            Self::Standard => "standard",
-            Self::Mono => "mono",
-        };
+        if f.alternate() {
+            match self {
+                Self::Standard => write!(f, "Standard")?,
+                Self::Mono => write!(f, "Mono")?,
+            };
+        } else {
+            match self {
+                Self::Standard => write!(f, "standard")?,
+                Self::Mono => write!(f, "mono")?,
+            };
+        }
 
-        write!(f, "{}", kind)?;
         Ok(())
     }
 }

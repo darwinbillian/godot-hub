@@ -13,7 +13,7 @@ use crate::{
             platform::PlatformService,
         },
     },
-    domain::models::version::{Flavor, FlavorKind, Variant, Version},
+    domain::models::version::{Flavor, Variant, Version, VersionFlavorVariant},
 };
 
 pub struct ReleaseService {
@@ -52,29 +52,13 @@ impl ReleaseService {
             .flat_map(|metadata| {
                 Variant::iter().filter_map(|variant| {
                     let id = format!(
-                        "{}-{}{}",
-                        metadata.version,
-                        metadata.flavor,
-                        match variant {
-                            Variant::Standard => "",
-                            Variant::Mono => "-mono",
-                        }
+                        "{}",
+                        VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
                     );
 
                     let name = format!(
-                        "Godot {:.2}{}{}",
-                        metadata.version,
-                        match metadata.flavor.kind {
-                            FlavorKind::Dev => " Dev",
-                            FlavorKind::Alpha => " Alpha",
-                            FlavorKind::Beta => " Beta",
-                            FlavorKind::Rc => " Rc",
-                            FlavorKind::Stable => "",
-                        },
-                        match variant {
-                            Variant::Standard => "",
-                            Variant::Mono => " Mono",
-                        }
+                        "{:#}",
+                        VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
                     );
 
                     let status = match download_configs.get_slug(
@@ -117,14 +101,10 @@ impl ReleaseService {
             .into_iter()
             .map(|install| {
                 let id = format!(
-                    "{}-{}{}",
-                    install.version,
-                    install.flavor,
-                    match install.variant {
-                        Variant::Standard => "",
-                        Variant::Mono => "-mono",
-                    }
+                    "{}",
+                    VersionFlavorVariant::new(install.version, install.flavor, install.variant)
                 );
+
                 (id, install)
             })
             .collect())

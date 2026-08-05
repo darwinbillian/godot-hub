@@ -20,7 +20,7 @@ use crate::{
         },
         utils::{fs::DirectoryGuard, zip::ZipFile},
     },
-    domain::models::version::{Flavor, FlavorKind, Variant, Version},
+    domain::models::version::{Flavor, Variant, Version, VersionFlavorVariant},
 };
 
 pub struct InstallerService {
@@ -52,32 +52,8 @@ impl InstallerService {
     }
 
     pub fn create(&self, version: Version, flavor: Flavor, variant: Variant) -> Installer {
-        let id = format!(
-            "{}-{}{}",
-            version,
-            flavor,
-            match variant {
-                Variant::Standard => "",
-                Variant::Mono => "-mono",
-            }
-        );
-
-        let name = format!(
-            "Godot {:.2}{}{}",
-            version,
-            match flavor.kind {
-                FlavorKind::Dev => " Dev",
-                FlavorKind::Alpha => " Alpha",
-                FlavorKind::Beta => " Beta",
-                FlavorKind::Rc => " Rc",
-                FlavorKind::Stable => "",
-            },
-            match variant {
-                Variant::Standard => "",
-                Variant::Mono => " Mono",
-            }
-        );
-
+        let id = format!("{}", VersionFlavorVariant::new(version, flavor, variant));
+        let name = format!("{:#}", VersionFlavorVariant::new(version, flavor, variant));
         Installer {
             download_configs_provider: self.inner.download_configs_provider.clone(),
             download_service: self.inner.download_service.clone(),
