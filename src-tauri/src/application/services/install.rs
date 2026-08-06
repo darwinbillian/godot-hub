@@ -1,6 +1,7 @@
-use std::{cmp::Reverse, collections::HashMap, sync::Arc};
+use std::{cmp::Reverse, sync::Arc};
 
 use anyhow::{Error, Result};
+use itertools::Itertools;
 
 use crate::{
     application::{
@@ -163,20 +164,17 @@ impl InstallService {
                 Some(install)
             });
 
-        let mut installs = tasks
-            .chain(installations)
-            .map(|install| (install.id.clone(), install))
-            .collect::<HashMap<String, Install>>()
-            .into_values()
+        let installs = installations
+            .chain(tasks)
+            .unique_by(|install| install.id.clone())
+            .sorted_unstable_by_key(|install| {
+                Reverse(VersionFlavorVariant::new(
+                    install.version,
+                    install.flavor,
+                    install.variant,
+                ))
+            })
             .collect::<Vec<Install>>();
-
-        installs.sort_unstable_by_key(|install| {
-            Reverse(VersionFlavorVariant::new(
-                install.version,
-                install.flavor,
-                install.variant,
-            ))
-        });
 
         Ok(installs)
     }

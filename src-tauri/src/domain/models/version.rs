@@ -257,7 +257,7 @@ pub enum Variant {
 }
 
 impl Variant {
-    pub fn iter() -> impl Iterator<Item = Variant> {
+    pub fn iter() -> impl Iterator<Item = Variant> + Clone {
         [Variant::Standard, Variant::Mono].into_iter()
     }
 }

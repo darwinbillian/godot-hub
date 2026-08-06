@@ -1589,6 +1589,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "http-cache-reqwest",
+ "itertools",
  "reqwest 0.12.28",
  "reqwest-middleware",
  "serde",
@@ -2139,6 +2140,15 @@ checksum = "173609498df190136aa7dea1a91db051746d339e18476eed5ca40521f02d7aa5"
 dependencies = [
  "is-docker",
  "once_cell",
+]
+
+[[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
+dependencies = [
+ "either",
 ]
 
 [[package]]

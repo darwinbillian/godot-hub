@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::Result;
+use itertools::Itertools;
 
 use crate::{
     application::{
@@ -65,48 +66,47 @@ impl ReleaseService {
             .list_releases()
             .await?
             .iter()
-            .flat_map(|metadata| {
-                Variant::iter().filter_map(|variant| {
-                    let id = format!(
-                        "{}",
-                        VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
-                    );
+            .cartesian_product(Variant::iter())
+            .filter_map(|(metadata, variant)| {
+                let id = format!(
+                    "{}",
+                    VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
+                );
 
-                    let name = format!(
-                        "{:#}",
-                        VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
-                    );
+                let name = format!(
+                    "{:#}",
+                    VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
+                );
 
-                    let status = match download_configs.get_slug(
-                        metadata.version,
-                        metadata.flavor,
-                        variant,
-                        &platform,
-                    ) {
-                        Ok(_) => ReleaseStatus::Available,
-                        Err(e) => match e {
-                            DownloadConfigsError::ReleaseNotAvailableForPlatform(_, _) => {
-                                ReleaseStatus::Unavailable
-                            }
-                            _ => return None,
-                        },
-                    };
+                let status = match download_configs.get_slug(
+                    metadata.version,
+                    metadata.flavor,
+                    variant,
+                    &platform,
+                ) {
+                    Ok(_) => ReleaseStatus::Available,
+                    Err(e) => match e {
+                        DownloadConfigsError::ReleaseNotAvailableForPlatform(_, _) => {
+                            ReleaseStatus::Unavailable
+                        }
+                        _ => return None,
+                    },
+                };
 
-                    let install = installs.get(&id).cloned();
+                let install = installs.get(&id).cloned();
 
-                    let release = Release {
-                        id,
-                        name,
-                        version: metadata.version,
-                        flavor: metadata.flavor,
-                        variant,
-                        release_notes: metadata.release_notes.clone(),
-                        status,
-                        install,
-                    };
+                let release = Release {
+                    id,
+                    name,
+                    version: metadata.version,
+                    flavor: metadata.flavor,
+                    variant,
+                    release_notes: metadata.release_notes.clone(),
+                    status,
+                    install,
+                };
 
-                    Some(release)
-                })
+                Some(release)
             })
             .collect::<Vec<Release>>();
 
