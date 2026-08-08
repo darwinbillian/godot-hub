@@ -1,9 +1,9 @@
 use std::borrow::Borrow;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    application::services::release::{Release, ReleaseStatus},
+    application::services::release::{Release, ReleaseFilter, ReleaseStatus},
     presentation::ipc::features::install::dtos::InstallDto,
 };
 
@@ -51,5 +51,20 @@ where
             ReleaseStatus::Available => Self::Available,
             ReleaseStatus::Unavailable => Self::Unavailable,
         }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ReleaseFilterDto {
+    flavor: Option<String>,
+}
+
+impl TryFrom<ReleaseFilterDto> for ReleaseFilter {
+    type Error = anyhow::Error;
+
+    fn try_from(value: ReleaseFilterDto) -> Result<Self, Self::Error> {
+        let flavor = value.flavor.map(|flavor| flavor.parse()).transpose()?;
+        let result = Self { flavor };
+        Ok(result)
     }
 }

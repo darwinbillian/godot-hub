@@ -121,4 +121,26 @@
       @apply h-1 rounded-full bg-blue-500 transition-all duration-400;
     }
   }
+
+  .tabs {
+    @apply border-b border-white/10;
+  }
+
+  .tab {
+    @apply relative inline-flex cursor-pointer flex-col items-center px-6 py-4 text-neutral-400 transition hover:text-neutral-200;
+
+    &::before {
+      @apply invisible h-0 font-semibold;
+      content: attr(data-text);
+    }
+  }
+
+  .tab-active {
+    @apply font-semibold text-neutral-200;
+
+    &::after {
+      @apply absolute inset-x-0 -bottom-px h-0.5 bg-blue-500;
+      content: "";
+    }
+  }
 }

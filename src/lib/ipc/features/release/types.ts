@@ -12,3 +12,7 @@ export interface Release {
 }
 
 export type ReleaseStatus = { type: "available" } | { type: "unavailable" };
+
+export interface ReleaseFilter {
+  flavor?: string;
+}

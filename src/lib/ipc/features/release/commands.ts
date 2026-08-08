@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Release } from "./types";
+import { Release, ReleaseFilter } from "./types";
 
-export function list(): Promise<Release[]> {
-  return invoke<Release[]>("releases::list");
+export function list(filter: ReleaseFilter): Promise<Release[]> {
+  return invoke<Release[]>("releases::list", {
+    filter,
+  });
 }

@@ -1,4 +1,8 @@
-use std::{fmt::Display, str::FromStr};
+use std::{
+    fmt::Display,
+    ops::{BitOr, BitOrAssign},
+    str::FromStr,
+};
 
 use thiserror::Error;
 
@@ -241,6 +245,91 @@ impl Display for FlavorKind {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct FlavorKindFlags(u8);
+
+impl FlavorKindFlags {
+    pub const NONE: Self = Self(0);
+    pub const DEV: Self = Self(1 << 0);
+    pub const ALPHA: Self = Self(1 << 1);
+    pub const BETA: Self = Self(1 << 2);
+    pub const RC: Self = Self(1 << 3);
+    pub const STABLE: Self = Self(1 << 4);
+    pub const PRERELEASE: Self = Self(Self::DEV.0 | Self::ALPHA.0 | Self::BETA.0 | Self::RC.0);
+    pub const ALL: Self = Self(Self::PRERELEASE.0 | Self::STABLE.0);
+
+    pub fn contains<F>(&self, other: F) -> bool
+    where
+        F: Into<Self>,
+    {
+        let other = other.into();
+        self.0 & other.0 == other.0
+    }
+}
+
+impl BitOr for FlavorKindFlags {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for FlavorKindFlags {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl Default for FlavorKindFlags {
+    fn default() -> Self {
+        Self::ALL
+    }
+}
+
+impl From<Flavor> for FlavorKindFlags {
+    fn from(value: Flavor) -> Self {
+        value.kind.into()
+    }
+}
+
+impl From<FlavorKind> for FlavorKindFlags {
+    fn from(value: FlavorKind) -> Self {
+        match value {
+            FlavorKind::Dev => Self::DEV,
+            FlavorKind::Alpha => Self::ALPHA,
+            FlavorKind::Beta => Self::BETA,
+            FlavorKind::Rc => Self::RC,
+            FlavorKind::Stable => Self::STABLE,
+        }
+    }
+}
+
+impl FromStr for FlavorKindFlags {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut flags = Self::NONE;
+
+        for part in s.split(',') {
+            let flag = match part {
+                "dev" => Self::DEV,
+                "alpha" => Self::ALPHA,
+                "beta" => Self::BETA,
+                "rc" => Self::RC,
+                "stable" => Self::STABLE,
+                "prerelease" => Self::PRERELEASE,
+                "all" => Self::ALL,
+                _ => return Err(anyhow::anyhow!(FlavorError::UnknownKind(part.to_owned()))),
+            };
+
+            flags |= flag
+        }
+
+        Ok(flags)
     }
 }
 

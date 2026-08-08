@@ -14,7 +14,7 @@ use crate::{
             platform::PlatformService,
         },
     },
-    domain::models::version::{Flavor, Variant, Version, VersionFlavorVariant},
+    domain::models::version::{Flavor, FlavorKindFlags, Variant, Version, VersionFlavorVariant},
 };
 
 pub struct ReleaseService {
@@ -39,7 +39,7 @@ impl ReleaseService {
         }
     }
 
-    pub async fn list(&self) -> Result<Vec<Release>> {
+    pub async fn list(&self, filter: Option<ReleaseFilter>) -> Result<Vec<Release>> {
         let platform = self.platform_service.get_platform()?;
         let download_configs = self
             .download_configs_provider
@@ -66,6 +66,13 @@ impl ReleaseService {
             .list_releases()
             .await?
             .iter()
+            .filter(|metadata| {
+                filter
+                    .as_ref()
+                    .and_then(|filter| filter.flavor)
+                    .unwrap_or_default()
+                    .contains(metadata.flavor)
+            })
             .cartesian_product(Variant::iter())
             .filter_map(|(metadata, variant)| {
                 let id = format!(
@@ -128,4 +135,9 @@ pub struct Release {
 pub enum ReleaseStatus {
     Available,
     Unavailable,
+}
+
+#[derive(Default)]
+pub struct ReleaseFilter {
+    pub flavor: Option<FlavorKindFlags>,
 }
