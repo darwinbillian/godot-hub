@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Install } from "./types";
+import { Install, InstallFilter } from "./types";
 
 export function install(
   version: string,
@@ -13,8 +13,10 @@ export function install(
   });
 }
 
-export function list(): Promise<Install[]> {
-  return invoke<Install[]>("installs::list");
+export function list(filter: InstallFilter): Promise<Install[]> {
+  return invoke<Install[]>("installs::list", {
+    filter,
+  });
 }
 
 export function launch(id: string): Promise<void> {

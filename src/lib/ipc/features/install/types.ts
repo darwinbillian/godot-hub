@@ -15,6 +15,10 @@ export type InstallStatus =
   | { type: "installed"; installation: Installation }
   | { type: "failed"; error: Error };
 
+export interface InstallFilter {
+  flavor?: string;
+}
+
 export type InstallProgress =
   | { type: "starting" }
   | { type: "downloading"; progress: DownloadProgress }

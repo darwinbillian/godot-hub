@@ -3,7 +3,7 @@ use tauri::State;
 use super::dtos::InstallDto;
 use crate::{
     domain::models::version::{Flavor, Variant, Version},
-    presentation::ipc::dtos::ErrorDto,
+    presentation::ipc::{dtos::ErrorDto, features::install::dtos::InstallFilterDto},
     state::AppState,
 };
 
@@ -25,10 +25,15 @@ pub async fn installs_install(
 }
 
 #[tauri::command(rename = "installs::list")]
-pub async fn installs_list(state: State<'_, AppState>) -> Result<Vec<InstallDto>, ErrorDto> {
+pub async fn installs_list(
+    state: State<'_, AppState>,
+    filter: Option<InstallFilterDto>,
+) -> Result<Vec<InstallDto>, ErrorDto> {
+    let filter = filter.map(|filter| filter.try_into()).transpose()?;
+
     let installs = state
         .install_service
-        .list()
+        .list(filter)
         .await?
         .into_iter()
         .map(InstallDto::from)

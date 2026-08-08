@@ -1,12 +1,12 @@
 use std::borrow::Borrow;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     application::services::{
         download::DownloadProgress,
         install::{
-            Install, InstallAddEventArgs, InstallRemoveEventArgs, InstallStatus,
+            Install, InstallAddEventArgs, InstallFilter, InstallRemoveEventArgs, InstallStatus,
             InstallUpdateEventArgs,
         },
         installation::Installation,
@@ -67,6 +67,21 @@ where
                 error: e.as_ref().into(),
             },
         }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct InstallFilterDto {
+    flavor: Option<String>,
+}
+
+impl TryFrom<InstallFilterDto> for InstallFilter {
+    type Error = anyhow::Error;
+
+    fn try_from(value: InstallFilterDto) -> Result<Self, Self::Error> {
+        let flavor = value.flavor.map(|flavor| flavor.parse()).transpose()?;
+        let result = Self { flavor };
+        Ok(result)
     }
 }
 

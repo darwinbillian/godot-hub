@@ -12,7 +12,7 @@ use crate::{
         },
         utils::event::Event,
     },
-    domain::models::version::{Flavor, Variant, Version, VersionFlavorVariant},
+    domain::models::version::{Flavor, FlavorKindFlags, Variant, Version, VersionFlavorVariant},
 };
 
 #[derive(Clone)]
@@ -123,7 +123,7 @@ impl InstallService {
         Ok(())
     }
 
-    pub async fn list(&self) -> Result<Vec<Install>> {
+    pub async fn list(&self, filter: Option<InstallFilter>) -> Result<Vec<Install>> {
         let installations = self
             .inner
             .installation_service
@@ -166,6 +166,13 @@ impl InstallService {
 
         let installs = installations
             .chain(tasks)
+            .filter(|install| {
+                filter
+                    .as_ref()
+                    .and_then(|filter| filter.flavor)
+                    .unwrap_or_default()
+                    .contains(install.flavor)
+            })
             .unique_by(|install| install.id.clone())
             .sorted_unstable_by_key(|install| {
                 Reverse(VersionFlavorVariant::new(
@@ -196,6 +203,10 @@ pub enum InstallStatus {
     Paused(Arc<InstallerProgress>),
     Installed(Arc<Installation>),
     Failed(Arc<Error>),
+}
+
+pub struct InstallFilter {
+    pub flavor: Option<FlavorKindFlags>,
 }
 
 pub struct InstallAddEventArgs;

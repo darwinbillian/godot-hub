@@ -48,7 +48,7 @@ impl ReleaseService {
 
         let installs = self
             .install_service
-            .list()
+            .list(None)
             .await?
             .into_iter()
             .map(|install| {

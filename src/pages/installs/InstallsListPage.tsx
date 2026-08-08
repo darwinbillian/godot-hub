@@ -17,7 +17,8 @@ import {
   removeEvent,
   updateEvent,
 } from "@/lib/ipc/features/install/events";
-import { Install } from "@/lib/ipc/features/install/types";
+import { Install, InstallFilter } from "@/lib/ipc/features/install/types";
+import clsx from "clsx";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -32,9 +33,27 @@ import {
 import { memo, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
+const FLAVORS = [
+  {
+    name: "All",
+    value: "all",
+  },
+  {
+    name: "Official releases",
+    value: "stable",
+  },
+  {
+    name: "Prereleases",
+    value: "prerelease",
+  },
+];
+
 export default function InstallsListPage() {
   const [installs, setInstalls] = useState<Install[]>();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<InstallFilter>({
+    flavor: "all",
+  });
 
   const indexedInstalls = useMemo(
     () =>
@@ -57,14 +76,15 @@ export default function InstallsListPage() {
   }, [indexedInstalls, search]);
 
   const updateInstalls = () => {
-    list()
+    list(filter)
       .then((installs) => setInstalls(installs))
       .catch((e) => console.error(e));
   };
 
   useEffect(() => {
+    setInstalls(undefined);
     updateInstalls();
-  }, []);
+  }, [filter]);
 
   useEffect(() => {
     return addEvent.subscribe(() => {
@@ -144,7 +164,7 @@ export default function InstallsListPage() {
   };
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="flex flex-col p-8">
       <div className="flex items-center gap-2">
         <div className="flex-1">
           <h1 className="text-2xl font-semibold">Installs</h1>
@@ -162,7 +182,27 @@ export default function InstallsListPage() {
           </Link>
         </div>
       </div>
-      <div>{renderInstalls()}</div>
+      <div className="tabs mt-2">
+        {FLAVORS.map((flavor) => (
+          <button
+            key={flavor.name}
+            className={clsx(
+              "tab",
+              flavor.value === filter.flavor && "tab-active",
+            )}
+            data-text={flavor.name}
+            onClick={() =>
+              setFilter((filter) => ({
+                ...filter,
+                flavor: flavor.value,
+              }))
+            }
+          >
+            {flavor.name}
+          </button>
+        ))}
+      </div>
+      <div className="mt-8">{renderInstalls()}</div>
     </div>
   );
 }
