@@ -7,7 +7,7 @@
 Godot Hub is a cross-platform desktop application for managing multiple versions
 of [Godot](https://godotengine.org/).
 
-![Screenshot](./docs/assets/screenshot.png)
+[![Screenshot](./docs/assets/screenshots/installs.png)](./docs/assets/screenshots/installs.png)
 
 ## Features
 
