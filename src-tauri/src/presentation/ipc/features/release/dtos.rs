@@ -57,6 +57,7 @@ where
 #[derive(Deserialize, Debug)]
 pub struct ReleaseFilterDto {
     flavor: Option<String>,
+    variant: Option<String>,
 }
 
 impl TryFrom<ReleaseFilterDto> for ReleaseFilter {
@@ -64,7 +65,8 @@ impl TryFrom<ReleaseFilterDto> for ReleaseFilter {
 
     fn try_from(value: ReleaseFilterDto) -> Result<Self, Self::Error> {
         let flavor = value.flavor.map(|flavor| flavor.parse()).transpose()?;
-        let result = Self { flavor };
+        let variant = value.variant.map(|variant| variant.parse()).transpose()?;
+        let result = Self { flavor, variant };
         Ok(result)
     }
 }

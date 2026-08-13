@@ -14,7 +14,9 @@ use crate::{
             platform::PlatformService,
         },
     },
-    domain::models::version::{Flavor, FlavorKindFlags, Variant, Version, VersionFlavorVariant},
+    domain::models::version::{
+        Flavor, FlavorKindFlags, Variant, VariantFlags, Version, VersionFlavorVariant,
+    },
 };
 
 pub struct ReleaseService {
@@ -46,6 +48,16 @@ impl ReleaseService {
             .get_download_configs()
             .await?;
 
+        let variants = Variant::iter()
+            .filter(|variant| {
+                filter
+                    .as_ref()
+                    .and_then(|filter| filter.variant)
+                    .unwrap_or_default()
+                    .contains(*variant)
+            })
+            .collect::<Vec<Variant>>();
+
         let installs = self
             .install_service
             .list(None)
@@ -73,7 +85,7 @@ impl ReleaseService {
                     .unwrap_or_default()
                     .contains(metadata.flavor)
             })
-            .cartesian_product(Variant::iter())
+            .cartesian_product(variants)
             .filter_map(|(metadata, variant)| {
                 let id = format!(
                     "{}",
@@ -140,4 +152,5 @@ pub enum ReleaseStatus {
 #[derive(Default)]
 pub struct ReleaseFilter {
     pub flavor: Option<FlavorKindFlags>,
+    pub variant: Option<VariantFlags>,
 }

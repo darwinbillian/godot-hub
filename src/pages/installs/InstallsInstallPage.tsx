@@ -29,11 +29,23 @@ const FLAVORS = [
   },
 ];
 
+const VARIANTS = [
+  {
+    name: "Standard",
+    value: "standard",
+  },
+  {
+    name: "Mono",
+    value: "mono",
+  },
+];
+
 export default function InstallsInstallPage() {
   const [releases, setReleases] = useState<Release[]>();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ReleaseFilter>({
     flavor: "stable",
+    variant: "standard",
   });
 
   const indexedReleases = useMemo(
@@ -180,6 +192,30 @@ export default function InstallsInstallPage() {
             {flavor.name}
           </button>
         ))}
+      </div>
+      <div className="mt-8">
+        <div className="flex items-center gap-4">
+          <label>Variant</label>
+          <div className="flex gap-2">
+            {VARIANTS.map((variant) => (
+              <button
+                key={variant.name}
+                className={clsx(
+                  "btn",
+                  filter.variant?.includes(variant.value) && "btn-primary",
+                )}
+                onClick={() => {
+                  setFilter((filter) => ({
+                    ...filter,
+                    variant: variant.value,
+                  }));
+                }}
+              >
+                {variant.name}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       <div className="mt-8">{renderReleases()}</div>
     </div>
