@@ -1,7 +1,7 @@
 import { Menu } from "@/components/Menu";
 import { Modal } from "@/components/Modal";
 import { Progress } from "@/components/Progress";
-import { SearchBox } from "@/components/SearchBox";
+import { Search } from "@/components/Search";
 import {
   cancel,
   install,
@@ -170,7 +170,7 @@ export default function InstallsListPage() {
           <h1 className="text-2xl font-semibold">Installs</h1>
         </div>
         <div className="flex items-center gap-2 text-neutral-900">
-          <SearchBox
+          <Search
             className="input w-50"
             value={search}
             onChange={(value) => {

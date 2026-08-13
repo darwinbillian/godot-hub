@@ -1,4 +1,4 @@
-import { SearchBox } from "@/components/SearchBox";
+import { Search } from "@/components/Search";
 import { install, resume } from "@/lib/ipc/features/install/commands";
 import {
   addEvent,
@@ -164,7 +164,7 @@ export default function InstallsInstallPage() {
           <h1 className="text-2xl font-semibold">Install Godot Editor</h1>
         </div>
         <div>
-          <SearchBox
+          <Search
             className="input w-50"
             value={search}
             onChange={(value) => {
