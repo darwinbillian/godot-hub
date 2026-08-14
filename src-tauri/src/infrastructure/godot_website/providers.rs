@@ -8,7 +8,7 @@ use crate::{
         download_configs::{DownloadConfigs, DownloadConfigsProvider},
         release::{ReleaseMetadata, ReleaseProvider},
     },
-    domain::models::version::{Flavor, Version},
+    domain::models::{Flavor, Version},
 };
 
 pub struct GodotWebsiteReleaseProvider {

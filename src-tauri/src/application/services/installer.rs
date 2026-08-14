@@ -20,7 +20,7 @@ use crate::{
         },
         utils::{fs::DirectoryGuard, zip::ZipFile},
     },
-    domain::models::version::{Flavor, Variant, Version, VersionFlavorVariant},
+    domain::models::{Flavor, ReleaseVariant, Variant, Version},
 };
 
 pub struct InstallerService {
@@ -52,8 +52,8 @@ impl InstallerService {
     }
 
     pub fn create(&self, version: Version, flavor: Flavor, variant: Variant) -> Installer {
-        let id = format!("{}", VersionFlavorVariant::new(version, flavor, variant));
-        let name = format!("{:#}", VersionFlavorVariant::new(version, flavor, variant));
+        let id = format!("{}", ReleaseVariant::new(version, flavor, variant));
+        let name = format!("{:#}", ReleaseVariant::new(version, flavor, variant));
         Installer {
             download_configs_provider: self.inner.download_configs_provider.clone(),
             download_service: self.inner.download_service.clone(),

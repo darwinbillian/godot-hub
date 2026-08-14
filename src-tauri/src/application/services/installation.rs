@@ -9,7 +9,7 @@ use tokio::process::Command;
 
 use crate::{
     application::utils::event::Event,
-    domain::models::version::{Flavor, Variant, Version},
+    domain::models::{Flavor, Variant, Version},
 };
 
 #[derive(Clone)]

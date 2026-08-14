@@ -4,7 +4,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use tokio_stream::Stream;
 
-use crate::domain::models::version::{Flavor, Version};
+use crate::domain::models::{Flavor, Version};
 
 #[async_trait::async_trait]
 pub trait DownloadProvider {

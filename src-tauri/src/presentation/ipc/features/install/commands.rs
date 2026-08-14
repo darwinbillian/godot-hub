@@ -2,7 +2,7 @@ use tauri::State;
 
 use super::dtos::InstallDto;
 use crate::{
-    domain::models::version::{Flavor, Variant, Version},
+    domain::models::{Flavor, Variant, Version},
     presentation::ipc::{dtos::ErrorDto, features::install::dtos::InstallFilterDto},
     state::AppState,
 };

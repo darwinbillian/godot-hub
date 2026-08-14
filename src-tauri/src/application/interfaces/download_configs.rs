@@ -3,9 +3,7 @@ use std::{collections::HashMap, ops::RangeInclusive};
 use anyhow::Result;
 use thiserror::Error;
 
-use crate::domain::models::version::{
-    Flavor, Variant, Version, VersionFlavor, VersionFlavorVariant,
-};
+use crate::domain::models::{Flavor, Release, ReleaseVariant, Variant, Version};
 
 #[async_trait::async_trait]
 pub trait DownloadConfigsProvider {
@@ -30,14 +28,12 @@ impl DownloadConfigs {
             .iter()
             .rfind(|r#override| {
                 r#override.version == version.major
-                    && r#override
-                        .range
-                        .contains(&VersionFlavor::new(version, flavor))
+                    && r#override.range.contains(&Release::new(version, flavor))
             })
             .map(|r#override| &r#override.config)
             .or_else(|| self.defaults.get(&version.major))
             .ok_or_else(|| {
-                DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
+                DownloadConfigsError::ReleaseNotAvailable(ReleaseVariant::new(
                     version, flavor, variant,
                 ))
             })?;
@@ -45,21 +41,19 @@ impl DownloadConfigs {
         let download_config = match variant {
             Variant::Standard => &group.standard,
             Variant::Mono => group.mono.as_ref().ok_or_else(|| {
-                DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
+                DownloadConfigsError::ReleaseNotAvailable(ReleaseVariant::new(
                     version, flavor, variant,
                 ))
             })?,
         };
 
         let editor = download_config.editor.as_ref().ok_or_else(|| {
-            DownloadConfigsError::ReleaseNotAvailable(VersionFlavorVariant::new(
-                version, flavor, variant,
-            ))
+            DownloadConfigsError::ReleaseNotAvailable(ReleaseVariant::new(version, flavor, variant))
         })?;
 
         let slug = editor.get(platform).ok_or_else(|| {
             DownloadConfigsError::ReleaseNotAvailableForPlatform(
-                VersionFlavorVariant::new(version, flavor, variant),
+                ReleaseVariant::new(version, flavor, variant),
                 platform.to_owned(),
             )
         })?;
@@ -70,7 +64,7 @@ impl DownloadConfigs {
 
 pub struct DownloadConfigOverride {
     pub version: u32,
-    pub range: RangeInclusive<VersionFlavor>,
+    pub range: RangeInclusive<Release>,
     pub config: DownloadConfigGroup,
 }
 
@@ -86,7 +80,7 @@ pub struct DownloadConfig {
 #[derive(Error, Debug)]
 pub enum DownloadConfigsError {
     #[error("release '{0}' is not available")]
-    ReleaseNotAvailable(VersionFlavorVariant),
+    ReleaseNotAvailable(ReleaseVariant),
     #[error("release '{0}' is not available for platform '{1}'")]
-    ReleaseNotAvailableForPlatform(VersionFlavorVariant, String),
+    ReleaseNotAvailableForPlatform(ReleaseVariant, String),
 }

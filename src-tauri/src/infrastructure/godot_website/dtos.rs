@@ -6,7 +6,7 @@ use crate::{
     application::interfaces::download_configs::{
         DownloadConfig, DownloadConfigGroup, DownloadConfigOverride, DownloadConfigs,
     },
-    domain::models::version::VersionFlavor,
+    domain::models::Release,
 };
 
 #[allow(dead_code)]
@@ -75,8 +75,8 @@ impl TryFrom<DownloadConfigOverrideDto> for DownloadConfigOverride {
     fn try_from(value: DownloadConfigOverrideDto) -> Result<Self, Self::Error> {
         let [start, end] = value.range;
 
-        let start = start.parse::<VersionFlavor>()?;
-        let end = end.parse::<VersionFlavor>()?;
+        let start = start.parse::<Release>()?;
+        let end = end.parse::<Release>()?;
 
         let result = Self {
             version: value.version,

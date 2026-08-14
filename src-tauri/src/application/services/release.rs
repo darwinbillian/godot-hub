@@ -14,9 +14,7 @@ use crate::{
             platform::PlatformService,
         },
     },
-    domain::models::version::{
-        Flavor, FlavorKindFlags, Variant, VariantFlags, Version, VersionFlavorVariant,
-    },
+    domain::models::{Flavor, FlavorKindFlags, ReleaseVariant, Variant, VariantFlags, Version},
 };
 
 pub struct ReleaseService {
@@ -66,7 +64,7 @@ impl ReleaseService {
             .map(|install| {
                 let id = format!(
                     "{}",
-                    VersionFlavorVariant::new(install.version, install.flavor, install.variant)
+                    ReleaseVariant::new(install.version, install.flavor, install.variant)
                 );
 
                 (id, install)
@@ -89,12 +87,12 @@ impl ReleaseService {
             .filter_map(|(metadata, variant)| {
                 let id = format!(
                     "{}",
-                    VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
+                    ReleaseVariant::new(metadata.version, metadata.flavor, variant)
                 );
 
                 let name = format!(
                     "{:#}",
-                    VersionFlavorVariant::new(metadata.version, metadata.flavor, variant)
+                    ReleaseVariant::new(metadata.version, metadata.flavor, variant)
                 );
 
                 let status = match download_configs.get_slug(

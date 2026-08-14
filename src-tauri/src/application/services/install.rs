@@ -12,7 +12,7 @@ use crate::{
         },
         utils::event::Event,
     },
-    domain::models::version::{Flavor, FlavorKindFlags, Variant, Version, VersionFlavorVariant},
+    domain::models::{Flavor, FlavorKindFlags, ReleaseVariant, Variant, Version},
 };
 
 #[derive(Clone)]
@@ -175,7 +175,7 @@ impl InstallService {
             })
             .unique_by(|install| install.id.clone())
             .sorted_unstable_by_key(|install| {
-                Reverse(VersionFlavorVariant::new(
+                Reverse(ReleaseVariant::new(
                     install.version,
                     install.flavor,
                     install.variant,
